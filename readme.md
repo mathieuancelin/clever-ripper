@@ -1,6 +1,6 @@
 # clever-ripper
 
-Otoroshi addon to shutdown your clever-cloud app instances if not used since an amount of time.
+Otoroshi addon to shutdown your clever-cloud app instances if not used since a specific amount of time.
 
 ## Run
 
