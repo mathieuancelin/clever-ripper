@@ -96,7 +96,7 @@ function fetchRipperEnabledOtoroshiServices() {
 
 function fetchOtoroshiEventsForService(id) {
   const now = Date.now();
-  return fetch(`${OTOROSHI_URL}/api/services/${id}/events?from=${now - MINUS}&to=${now}`, {
+  return fetch(`${OTOROSHI_URL}/api/services/${id}/stats?from=${now - MINUS}&to=${now}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -215,8 +215,8 @@ function checkServicesToShutDown() {
   console.log('Checking otoroshi services ...')
   fetchRipperEnabledOtoroshiServices().then(services => {
     services.map(service => {
-      fetchOtoroshiEventsForService(service.id).then(events => {
-        if (events.length === 0) {
+      fetchOtoroshiEventsForService(service.id).then(stats => {
+        if (stats.hits === 0) {
           const cleverAppId = service.metadata['clever.ripper.appId'];
           if (cleverAppId) {
             fetchAppDeploymentStatus(cleverAppId).then(status => {
