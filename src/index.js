@@ -17,7 +17,7 @@ const SELF_HOST = process.env.SELF_HOST;
 const SELF_SCHEME = process.env.SELF_SCHEME;
 
 const ONE_HOUR = 3600 * 1000;
-const MINUS = parseInt(process.env.MINUS || (ONE_HOUR + ''), 10);
+const TIME_WITHOUT_REQUEST = parseInt(process.env.MINUS || (ONE_HOUR + ''), 10);
 const RUN_EVERY = parseInt(process.env.RUN_EVERY || (60000 + ''), 10);
 
 function checkIfExist(label, what) {

@@ -18,6 +18,8 @@ CLEVER_SECRET=xxxxxx
 CLEVER_ORGA=orga_xxxxx
 SELF_HOST=clever-ripper.foo.bar
 SELF_SCHEME=https
+TIME_WITHOUT_REQUEST=3600000
+RUN_EVERY=60000
 ```
 
 then run it (this addon is designed to run on clever-cloud)
