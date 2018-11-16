@@ -1,0 +1,25 @@
+{
+  "name": "clever-ripper",
+  "version": "1.0.0",
+  "description": "Ripper that shutdown unsused clever cloud instances and restart it on the fly using Otoroshi",
+  "main": "src/index.js",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": "^10"
+  },
+  "script": {
+    "start": "node ./scr/index.js"
+  },
+  "dependencies": {
+    "axios": "0.18.0",
+    "base-64": "0.1.0",
+    "body-parser": "1.18.3",
+    "clever-client": "0.11.1",
+    "express": "4.16.4",
+    "jsonwebtoken": "8.4.0",
+    "lodash": "4.17.11",
+    "moment": "2.22.2",
+    "node-fetch": "2.3.0"
+  }
+}
