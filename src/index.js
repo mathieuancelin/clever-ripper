@@ -258,6 +258,7 @@ function requestToStartCleverApp(req, res) {
             <h5>You will be redirected automatically when it's ready</h5>
             <script type="text/javascript">
               function checkState() {
+                // TODO: use self url ???
                 fetch('${SELF_SCHEME}://${SELF_HOST}/status/${serviceId}/${cleverAppId}').then(r => r.json()).then(status => {
                   if (status.status === 'READY') {
                     window.location.reload();
@@ -275,6 +276,7 @@ function requestToStartCleverApp(req, res) {
         fetchAppDeploymentStatus(cleverAppId).then(status => {
           if (status === 'SHOULD_BE_DOWN') {
             startCleverApp(cleverAppId).then(() => {
+              // TODO: should add a task and check status in that task
               res.type('html').send(body);
             }).catch(e => {
               res.status(500).send({ error: e.message });
@@ -292,6 +294,7 @@ function requestToStartCleverApp(req, res) {
   }
 }
 
+// TODO: should just lookup in some kind of task cache
 function requestCleverAppStatus(req, res) {
   const cleverAppId = req.params.cleverAppId;
   const serviceId = req.params.serviceId;
