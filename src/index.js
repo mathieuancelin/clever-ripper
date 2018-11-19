@@ -96,7 +96,7 @@ function fetchRipperEnabledOtoroshiServices() {
         && service.metadata['clever.ripper.enabled'] 
         && service.metadata['clever.ripper.enabled'] === 'true'
         && service.metadata['clever.ripper.waiting'] !== 'true'
-        && lastRestart < (Date.now() - RUN_EVERY);
+        && lastRestart < (Date.now() - (RUN_EVERY * 10));
     });
   })
 }
@@ -358,11 +358,15 @@ function requestToStartCleverApp(req, res) {
                 Accept: 'application/json',
                 CleverRipper: 'status',
               }
-            }).then(r => r.json()).then(status => {
+            }).then(r => r.json(), e => {
+              window.location.reload();
+            }).then(status => {
               console.log(status.status)
               if (status.status === 'READY') {
                 window.location.reload();
               }
+            }).catch(e => {
+              window.location.reload();
             });
           }
           setInterval(checkState, 10000);
