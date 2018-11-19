@@ -55,4 +55,4 @@ class Cache {
   }
 }
 
-module.exports = Cache;
+exports.Cache = Cache;
