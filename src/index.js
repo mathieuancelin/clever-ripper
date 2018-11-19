@@ -494,7 +494,6 @@ if (process.env.ONE_SHOT === 'true') {
     if (instanceType === 'build') {
       console.log('On clever build instance, doing nothing !!!');
     } else {
-      checkServicesToShutDown();
       setTimeout(() => {
         setInterval(checkServicesToShutDown, RUN_EVERY);
       }, 10000);
