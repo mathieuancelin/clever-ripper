@@ -20,7 +20,7 @@ const SELF_SCHEME = process.env.SELF_SCHEME;
 const DRY_MODE = process.env.DRY_MODE === 'true';
 
 const ONE_HOUR = 3600 * 1000;
-const TIME_WITHOUT_REQUEST = parseInt(process.env.MINUS || (ONE_HOUR + ''), 10);
+const TIME_WITHOUT_REQUEST = parseInt(process.env.TIME_WITHOUT_REQUEST || (ONE_HOUR + ''), 10);
 const RUN_EVERY = parseInt(process.env.RUN_EVERY || (60000 + ''), 10);
 
 function checkIfExist(label, what) {
