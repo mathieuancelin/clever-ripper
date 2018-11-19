@@ -39,4 +39,4 @@ clever.ripper.appId: xxxxx.cleverapps.io
 
 **WARNING** `clever-ripper` will only check if the app had http traffic during the last `$TIME_WITHOUT_REQUEST` milliseconds. If your application has some cron jobs, scheduled job, etc that doesn't use http throught Otoroshi, it will be shut down by `clever-ripper`
 
-Once an application has been shut down, the first http request will restart the application. A waiting page will be displayed until the app is back online.
+Once an application has been shut down, the first http request will restart the application. A waiting page will be displayed (based on your custom maintainance template if it exists) until the app is back online.
