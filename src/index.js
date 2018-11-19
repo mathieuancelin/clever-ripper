@@ -381,12 +381,29 @@ if (process.env.ONE_SHOT === 'true') {
   const stateHeader = process.env.STATE_HEADER = 'Otoroshi-State';
   const stateRespHeader = process.env.STATE_RESP_HEADER = 'Otoroshi-State-Resp';
   function otoroshiMiddleware(req, res, next) {
+    console.log(`SET ${stateRespHeader}: ${req.get(stateHeader) || 'none'}`);
     res.set(stateRespHeader, req.get(stateHeader) || 'none');
     next();
   }
   app.use(otoroshiMiddleware);
   app.all('/waiting-page/:serviceId/', requestToStartCleverApp);
   app.all('/waiting-page/:serviceId/*', requestToStartCleverApp);
+  app.get('/api/health', (req, res) => {
+    res.status(200).send({ healthy: true, message: "Yes, I'm healthy !!!" });
+  });
+  app.use((err, req, res, next) => {
+    if (err) {
+      res.set(stateRespHeader, req.get(stateHeader) || 'none');
+      res.status(500).send({ error: err.message })
+    } else {
+      try {
+        next();
+      } catch(e) {
+        res.set(stateRespHeader, req.get(stateHeader) || 'none');
+        res.status(500).send({ error: e.message })
+      }
+    }
+  });
   app.listen(port, () => {
     console.log(`clever-ripper listening on port ${port}!`);
     checkServicesToShutDown();
