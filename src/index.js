@@ -378,8 +378,8 @@ if (process.env.ONE_SHOT === 'true') {
 } else {
   const app = express()
   const port = process.env.PORT || 8080;
-  const stateHeader = process.env.STATE_HEADER = 'Otoroshi-State';
-  const stateRespHeader = process.env.STATE_RESP_HEADER = 'Otoroshi-State-Resp';
+  const stateHeader = process.env.STATE_HEADER || 'Otoroshi-State';
+  const stateRespHeader = process.env.STATE_RESP_HEADER || 'Otoroshi-State-Resp';
   function otoroshiMiddleware(req, res, next) {
     console.log(`SET ${stateRespHeader}: ${req.get(stateHeader) || 'none'}`);
     res.set(stateRespHeader, req.get(stateHeader) || 'none');
