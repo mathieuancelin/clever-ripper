@@ -8,6 +8,7 @@ class Cache {
     this.deleteTasks = [];
     this.counter = 0;
     this.get = this.get.bind(this);
+    this.getAsync = this.getAsync.bind(this);
     this.set = this.set.bind(this);
     this.delete = this.delete.bind(this);
     this.stop = this.stop.bind(this);
@@ -28,12 +29,20 @@ class Cache {
     }
     this.timeout = setTimeout(this.popDeleteTask, 10);
   }
-  get(key) {
+  getAsync(key, orElse = () => Promise.reject(null)) {
+    const value = this.values[key];
+    if (value) {
+      return Promise.resolve(value.value);
+    } else {
+      return orElse();
+    }
+  }
+  get(key, orElse = () => null) {
     const value = this.values[key];
     if (value) {
       return value.value;
     } else {
-      return null;
+      return orElse();
     }
   }
   set(key, value, ttl = 0) {

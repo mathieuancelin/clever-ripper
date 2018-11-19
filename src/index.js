@@ -45,6 +45,7 @@ const CleverQueue = new TaskQueue();
 const StatusCheckQueue = new TaskQueue();
 const appIfForServiceIdCache = new Cache();
 const redeployCache = new Cache();
+const templateCache = new Cache();
 const cleverClient = new CleverCloudClient({
   "consumer_key": CLEVER_CONSUMER_KEY,
   "consumer_secret": CLEVER_CONSUMER_SECRET,
@@ -87,6 +88,23 @@ function fetchOtoroshiService(id) {
   });
 }
 
+function fetchOtoroshiTemplate(id) {
+  return fetch(`${OTOROSHI_URL}/api/services/${id}/template`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Host: OTOROSHI_HOST,
+      Authorization: `Basic ${base64.encode(OTOROSHI_CLIENT_ID + ':' + OTOROSHI_CLIENT_SECRET)}`
+    }
+  }).then(r => {
+    if (r.status == 200) {
+      return r.json();
+    } else {
+      return Promise.reject('Bad status: ' + r.status);
+    }
+  });
+}
+
 function fetchRipperEnabledOtoroshiServices() {
   return fetchOtoroshiServices().then(services => {
     return services.filter(service => {
@@ -103,8 +121,8 @@ function fetchRipperEnabledOtoroshiServices() {
 
 function fetchOtoroshiEventsForService(id) {
   const now = Date.now();
-  return fetch(`${OTOROSHI_URL}/api/services/${id}/events?from=${now - TIME_WITHOUT_REQUEST}&to=${now}&pageSize=5`, {
-  //return fetch(`${OTOROSHI_URL}/api/services/${id}/stats?from=${now - TIME_WITHOUT_REQUEST}&to=${now}`, {
+  return fetch(`${OTOROSHI_URL}/api/services/${id}/events?from=${now - TIME_WITHOUT_REQUEST}&to=${now}&pageSize=1`, { // Otoroshi v1.2.0+ compatible
+  //return fetch(`${OTOROSHI_URL}/api/services/${id}/stats?from=${now - TIME_WITHOUT_REQUEST}&to=${now}`, {           // Otoroshi v1.3.0+ compatible
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -327,10 +345,10 @@ function requestToStartCleverApp(req, res) {
     if (serviceId) {
       const currentStatus = redeployCache.get(serviceId); // should be DOWN | STARTING | ROUTING | READY
       if (currentStatus) {
-        res.send({ status: currentStatus });
+        res.set('CleverRipper', 'true').send({ status: currentStatus });
       } else {
-        console.log('Waking up app for service ' + serviceId)
         redeployCache.set(serviceId, 'DOWN', 2 * 60000);
+        console.log('Waking up app for service ' + serviceId)
         appIdForService(serviceId).then(cleverAppId => {  
           if (cleverAppId) {
             StatusCheckQueue.enqueue(() => checkDeploymentStatus(serviceId, cleverAppId));
@@ -339,21 +357,13 @@ function requestToStartCleverApp(req, res) {
             console.log(`No clever app for service ${serviceId}`);
           }
         });
+        res.set('CleverRipper', 'true').send({ status: 'DOWN' });
       }
     }
   } else {
-    res.type('html').send(`
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <title>Clever Ripper</title>
-        <meta name="robots" content="noindex, nofollow">
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-      </head>
-      <body style="background-color: rgb(55,55,55); color: white; width: 100vw; height: 100vh; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; flex-direction: column;">
-        <img style="width: 240px; margin-bottom: 40px;" src="https://www.otoroshi.io/assets/images/logos/otoroshi.png">
-        <h3>Your app is starting, please wait ...</h3>
-        <h5>You will be redirected automatically when it's ready</h5>
+    templateCache.getAsync(serviceId, () => {
+      return fetchOtoroshiTemplate(serviceId).then(r => {
+        const js = `
         <script type="text/javascript">
           function checkState() {
             fetch(window.location.pathname, {
@@ -361,11 +371,17 @@ function requestToStartCleverApp(req, res) {
                 Accept: 'application/json',
                 CleverRipper: 'status',
               }
-            }).then(r => r.json(), e => {
+            }).then(r => {
+              if (!r.headers.get('CleverRipper')) {
+                window.location.reload();
+              } else {
+                return r.json();
+              }
+            }, e => {
               window.location.reload();
             }).then(status => {
               console.log(status.status)
-              if (status.status === 'READY') {
+              if (status && status.status === 'READY') {
                 window.location.reload();
               }
             }).catch(e => {
@@ -375,9 +391,70 @@ function requestToStartCleverApp(req, res) {
           checkState();
           setInterval(checkState, 10000);
         </script>
-      </body>
-    </html>
-    `);
+        `;
+        const rawTemplate = r.templateMaintenance;
+        let template = rawTemplate;
+        if (rawTemplate.indexOf('<body') > -1) {
+          const $ = cheerio.load(rawTemplate);
+          const body = $('body');
+          body.append(js);
+          template = $.html();
+        } else {
+          template = rawTemplate + js;
+        }
+        template =  template
+          .replace("${message}", 'Your app is starting, please wait ...')
+          .replace("${cause}", 'You will be redirected automatically when it\'s ready')
+          .replace("${otoroshiMessage}", 'Your app is starting, please wait ...')
+          .replace("${errorId}", '')
+          .replace("${status}", '');
+        templateCache.set(serviceId, template, 10 * 60000);
+        return template;
+      }, e => `
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <title>Clever Ripper</title>
+            <meta name="robots" content="noindex, nofollow">
+            <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+          </head>
+          <body style="background-color: rgb(55,55,55); color: white; width: 100vw; height: 100vh; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+            <img style="width: 240px; margin-bottom: 40px;" src="https://www.otoroshi.io/assets/images/logos/otoroshi.png">
+            <h3>Your app is starting, please wait ...</h3>
+            <h5>You will be redirected automatically when it's ready</h5>
+            <script type="text/javascript">
+              function checkState() {
+                fetch(window.location.pathname, {
+                  headers: {
+                    Accept: 'application/json',
+                    CleverRipper: 'status',
+                  }
+                }).then(r => {
+                  if (!r.headers.get('CleverRipper')) {
+                    window.location.reload();
+                  } else {
+                    return r.json();
+                  }
+                }, e => {
+                  window.location.reload();
+                }).then(status => {
+                  console.log(status.status)
+                  if (status && status.status === 'READY') {
+                    window.location.reload();
+                  }
+                }).catch(e => {
+                  window.location.reload();
+                });
+              }
+              checkState();
+              setInterval(checkState, 10000);
+            </script>
+          </body>
+        </html>
+        `);
+
+    });
+    res.type('html').send();
   }
 }
 
