@@ -401,7 +401,7 @@ function requestToStartCleverApp(req, res) {
             });
           }
           checkState();
-          setInterval(checkState, 10000);
+          setInterval(checkState, 4000);
         </script>
         `;
         const rawTemplate = r.templateMaintenance;
@@ -459,7 +459,7 @@ function requestToStartCleverApp(req, res) {
                 });
               }
               checkState();
-              setInterval(checkState, 10000);
+              setInterval(checkState, 4000);
             </script>
           </body>
         </html>
