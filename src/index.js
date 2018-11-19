@@ -275,6 +275,7 @@ function checkDeploymentStatus(serviceId, cleverAppId) {
   console.log(`checkDeploymentStatus for ${serviceId} - ${cleverAppId}`);
   return fetchAppDeploymentStatus(cleverAppId).then(status => {
     const currentStatus = redeployCache.get(serviceId);
+    console.log('current status: ' + currentStatus + '/' + status);
     if (status === 'SHOULD_BE_DOWN' && currentStatus == 'DOWN') {
       return startCleverApp(cleverAppId).then(() => {
         redeployCache.set(serviceId, 'STARTING', 2 * 60000);
@@ -329,7 +330,7 @@ function requestToStartCleverApp(req, res) {
         redeployCache.set(serviceId, 'DOWN', 2 * 60000);
         appIdForService(serviceId).then(cleverAppId => {  
           if (cleverAppId) {
-            StatusCheckQueue.executeNext(() => checkDeploymentStatus(serviceId, cleverAppId));
+            StatusCheckQueue.enqueue(() => checkDeploymentStatus(serviceId, cleverAppId));
           } else {
             redeployCache.delete(serviceId);
             console.log(`No clever app for service ${serviceId}`);
