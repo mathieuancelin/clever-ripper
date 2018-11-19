@@ -319,7 +319,26 @@ function checkDeploymentStatus(serviceId, cleverAppId) {
 function requestToStartCleverApp(req, res) {
   const header = req.get('CleverRipper');
   if (header && header === 'status') {
-    const body = `
+    const serviceId = req.params.serviceId;
+    if (serviceId) {
+      const currentStatus = redeployCache.get(serviceId); // should be DOWN | STARTING | ROUTING | READY
+      if (currentStatus) {
+        res.send({ status: currentStatus });
+      } else {
+        console.log('Waking up app for service ' + serviceId)
+        redeployCache.set(serviceId, 'DOWN', 2 * 60000);
+        appIdForService(serviceId).then(cleverAppId => {  
+          if (cleverAppId) {
+            StatusCheckQueue.executeNext(() => checkDeploymentStatus(serviceId, cleverAppId));
+          } else {
+            redeployCache.delete(serviceId);
+            console.log(`No clever app for service ${serviceId}`);
+          }
+        });
+      }
+    }
+  } else {
+    res.type('html').send(`
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -349,27 +368,7 @@ function requestToStartCleverApp(req, res) {
         </script>
       </body>
     </html>
-    `;
-    res.type('html').send(body);
-  } else {
-    const serviceId = req.params.serviceId;
-    if (serviceId) {
-      const currentStatus = redeployCache.get(serviceId); // should be DOWN | STARTING | ROUTING | READY
-      if (currentStatus) {
-        res.send({ status: currentStatus });
-      } else {
-        console.log('Waking up app for service ' + serviceId)
-        redeployCache.set(serviceId, 'DOWN', 2 * 60000);
-        appIdForService(serviceId).then(cleverAppId => {  
-          if (cleverAppId) {
-            StatusCheckQueue.executeNext(() => checkDeploymentStatus(serviceId, cleverAppId));
-          } else {
-            redeployCache.delete(serviceId);
-            console.log(`No clever app for service ${serviceId}`);
-          }
-        });
-      }
-    }
+    `);
   }
 }
 
@@ -381,7 +380,6 @@ if (process.env.ONE_SHOT === 'true') {
   const stateHeader = process.env.STATE_HEADER || 'Otoroshi-State';
   const stateRespHeader = process.env.STATE_RESP_HEADER || 'Otoroshi-State-Resp';
   function otoroshiMiddleware(req, res, next) {
-    console.log(`SET ${stateRespHeader}: ${req.get(stateHeader) || 'none'}`);
     res.set(stateRespHeader, req.get(stateHeader) || 'none');
     next();
   }
