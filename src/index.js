@@ -241,8 +241,9 @@ function checkServicesToShutDown() {
     console.log(services.map(s => s.name))
     services.map(service => {
       CleverQueue.enqueue(() => {
-        console.log('Checking last events ....');
+        console.log(`Checking last events for ${service.name}....`);
         fetchOtoroshiEventsForService(service.id).then(stats => {
+          console.log(`Hits for ${service.name} in last ${TIME_WITHOUT_REQUEST} ms: ${stats.hits}`, stats);
           if (stats.hits === 0) {
             const cleverAppId = service.metadata['clever.ripper.appId'];
             if (cleverAppId) {
@@ -382,7 +383,9 @@ if (process.env.ONE_SHOT === 'true') {
   app.listen(port, () => {
     console.log(`Clever ripper listening on port ${port}!`);
     checkServicesToShutDown();
-    setInterval(checkServicesToShutDown, RUN_EVERY);
+    setTimeout(() => {
+      setInterval(checkServicesToShutDown, RUN_EVERY);
+    }, 10000);
   });
 }
 
