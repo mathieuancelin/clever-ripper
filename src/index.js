@@ -362,6 +362,17 @@ function requestToStartCleverApp(req, res) {
     }
   } else {
     const serviceId = req.params.serviceId;
+
+    if (!redeployCache.get(serviceId)) { // restart asap !!!
+      redeployCache.set(serviceId, 'DOWN', 2 * 60000);
+      console.log('Waking up app for service ' + serviceId)
+      appIdForService(serviceId).then(cleverAppId => {  
+        if (cleverAppId) {
+          StatusCheckQueue.enqueue(() => checkDeploymentStatus(serviceId, cleverAppId));
+        }
+      });
+    }
+
     templateCache.getAsync(serviceId, () => {
       return fetchOtoroshiTemplate(serviceId).then(r => {
         const js = `
