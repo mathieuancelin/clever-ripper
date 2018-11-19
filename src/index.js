@@ -490,10 +490,15 @@ if (process.env.ONE_SHOT === 'true') {
   });
   app.listen(port, () => {
     console.log(`clever-ripper listening on port ${port}!`);
-    checkServicesToShutDown();
-    setTimeout(() => {
-      setInterval(checkServicesToShutDown, RUN_EVERY);
-    }, 10000);
+    const instanceType = process.env.INSTANCE_TYPE || 'none';
+    if (instanceType === 'build') {
+      console.log('On clever build instance, doing nothing !!!');
+    } else {
+      checkServicesToShutDown();
+      setTimeout(() => {
+        setInterval(checkServicesToShutDown, RUN_EVERY);
+      }, 10000);
+    }
   });
 }
 
