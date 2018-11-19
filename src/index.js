@@ -221,7 +221,7 @@ function routeOtoroshiToClever(service) {
 function appIdForService(id) {
   const maybeAppId = appIfForServiceIdCache.get(id);
   if (!maybeAppId) {
-    return fetchOtoroshiService(serviceId).then(service => {
+    return fetchOtoroshiService(id).then(service => {
       const cleverAppId = service.metadata['clever.ripper.appId'];
       if (cleverAppId) {
         appIfForServiceIdCache.set(id, cleverAppId, 5 * 60000);
@@ -273,10 +273,10 @@ function checkServicesToShutDown() {
 
 function checkDeploymentStatus(serviceId, cleverAppId) {
   console.log(`checkDeploymentStatus for ${serviceId} - ${cleverAppId}`);
-  fetchAppDeploymentStatus(cleverAppId).then(status => {
+  return fetchAppDeploymentStatus(cleverAppId).then(status => {
     const currentStatus = redeployCache.get(serviceId);
     if (status === 'SHOULD_BE_DOWN' && currentStatus == 'DOWN') {
-      startCleverApp(cleverAppId).then(() => {
+      return startCleverApp(cleverAppId).then(() => {
         redeployCache.set(serviceId, 'STARTING', 2 * 60000);
         StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
       }).catch(e => {
@@ -288,9 +288,9 @@ function checkDeploymentStatus(serviceId, cleverAppId) {
       StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
     } else if (status === 'SHOULD_BE_UP' && currentStatus === 'STARTING') {
       redeployCache.set(serviceId, 'ROUTING', 2 * 60000);
-      fetchOtoroshiService(serviceId).then(service => {
+      return fetchOtoroshiService(serviceId).then(service => {
         if (service.metadata['clever.ripper.waiting'] === 'true') {
-          routeOtoroshiToClever(service).then(() => {
+          return routeOtoroshiToClever(service).then(() => {
             redeployCache.set(serviceId, 'READY', 2 * 60000);
           }).catch(e => {
             redeployCache.set(serviceId, 'ROUTING', 2 * 60000);
