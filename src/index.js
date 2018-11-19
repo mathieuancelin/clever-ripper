@@ -238,9 +238,10 @@ function appIdForService(id) {
 function checkServicesToShutDown() {
   console.log('Checking otoroshi services ...')
   fetchRipperEnabledOtoroshiServices().then(services => {
+    console.log(services.map(s => s.name))
     services.map(service => {
       CleverQueue.enqueue(() => {
-
+        console.log('Checking last events ....');
         fetchOtoroshiEventsForService(service.id).then(stats => {
           if (stats.hits === 0) {
             const cleverAppId = service.metadata['clever.ripper.appId'];
