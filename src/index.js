@@ -388,7 +388,7 @@ if (process.env.ONE_SHOT === 'true') {
   app.all('/waiting-page/:serviceId/', requestToStartCleverApp);
   app.all('/waiting-page/:serviceId/*', requestToStartCleverApp);
   app.listen(port, () => {
-    console.log(`Clever ripper listening on port ${port}!`);
+    console.log(`clever-ripper listening on port ${port}!`);
     checkServicesToShutDown();
     setTimeout(() => {
       setInterval(checkServicesToShutDown, RUN_EVERY);
