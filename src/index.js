@@ -3,6 +3,8 @@ const base64 = require('base-64');
 const moment = require('moment');
 const express = require('express');
 const { CleverCloudClient } = require('./clever');
+const { TaskQueue } = require('./tasks');
+const { Cache } = require('./Cache');
 
 const OTOROSHI_URL = process.env.OTOROSHI_URL;
 const OTOROSHI_HOST = process.env.OTOROSHI_HOST;
@@ -15,6 +17,7 @@ const CLEVER_SECRET = process.env.CLEVER_SECRET;
 const CLEVER_ORGA = process.env.CLEVER_ORGA;
 const SELF_HOST = process.env.SELF_HOST;
 const SELF_SCHEME = process.env.SELF_SCHEME;
+const DRY_MODE = process.env.DRY_MODE === 'true';
 
 const ONE_HOUR = 3600 * 1000;
 const TIME_WITHOUT_REQUEST = parseInt(process.env.MINUS || (ONE_HOUR + ''), 10);
@@ -38,6 +41,10 @@ checkIfExist('CLEVER_ORGA', CLEVER_ORGA);
 checkIfExist('SELF_HOST', SELF_HOST); 
 checkIfExist('SELF_SCHEME', SELF_SCHEME); 
 
+const CleverQueue = new TaskQueue();
+const StatusCheckQueue = new TaskQueue();
+const appIfForServiceIdCache = new Cache();
+const redeployCache = new Cache();
 const cleverClient = new CleverCloudClient({
   "consumer_key": CLEVER_CONSUMER_KEY,
   "consumer_secret": CLEVER_CONSUMER_SECRET,
@@ -96,7 +103,7 @@ function fetchRipperEnabledOtoroshiServices() {
 
 function fetchOtoroshiEventsForService(id) {
   const now = Date.now();
-  return fetch(`${OTOROSHI_URL}/api/services/${id}/stats?from=${now - MINUS}&to=${now}`, {
+  return fetch(`${OTOROSHI_URL}/api/services/${id}/stats?from=${now - TIME_WITHOUT_REQUEST}&to=${now}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -211,115 +218,156 @@ function routeOtoroshiToClever(service) {
   });
 }
 
+function appIdForService(id) {
+  const maybeAppId = appIfForServiceIdCache.get(id);
+  if (!maybeAppId) {
+    return fetchOtoroshiService(serviceId).then(service => {
+      const cleverAppId = service.metadata['clever.ripper.appId'];
+      if (cleverAppId) {
+        appIfForServiceIdCache.set(id, cleverAppId, 5 * 60000);
+        return cleverAppId;
+      } else {
+        return null;
+      }
+    });
+  } else {
+    return Promise.resolve(maybeAppId);
+  }
+}
+
 function checkServicesToShutDown() {
   console.log('Checking otoroshi services ...')
   fetchRipperEnabledOtoroshiServices().then(services => {
     services.map(service => {
-      fetchOtoroshiEventsForService(service.id).then(stats => {
-        if (stats.hits === 0) {
-          const cleverAppId = service.metadata['clever.ripper.appId'];
-          if (cleverAppId) {
-            fetchAppDeploymentStatus(cleverAppId).then(status => {
-              if (status === 'SHOULD_BE_UP') {
-                console.log(`Service ${service.name} should be shut down ...`);
-                routeOtoroshiToRipper(service).then(() => {
-                  shutdownCleverApp(cleverAppId).then(() => {
-                    console.log(`App ${cleverAppId} has been stopped. Next request will start it on the fly`);
-                  });
-                });
-              }
-            });
-          } else {
-            console.log(`No clever app id specified for ${service.name}...`);
+      CleverQueue.enqueue(() => {
+
+        fetchOtoroshiEventsForService(service.id).then(stats => {
+          if (stats.hits === 0) {
+            const cleverAppId = service.metadata['clever.ripper.appId'];
+            if (cleverAppId) {
+              appIfForServiceIdCache.set(service.id, cleverAppId, 5 * 60000);
+              return fetchAppDeploymentStatus(cleverAppId).then(status => {
+                if (status === 'SHOULD_BE_UP') {
+                  console.log(`Service ${service.name} should be shut down ...`);
+                  if (!DRY_MODE) {
+                    return routeOtoroshiToRipper(service).then(() => {
+                      return shutdownCleverApp(cleverAppId).then(() => {
+                        console.log(`App ${cleverAppId} has been stopped. Next request will start it on the fly`);
+                      });
+                    });
+                  }
+                }
+              });
+            } else {
+              console.log(`No clever app id specified for ${service.name}...`);
+            }
           }
-        }
-      })
+        });
+
+      });
     });
   });
 }
 
-function requestToStartCleverApp(req, res) {
-  const serviceId = req.params.serviceId;
-  if (serviceId) {
-    fetchOtoroshiService(serviceId).then(service => {
-      const cleverAppId = service.metadata['clever.ripper.appId'];
-      if (cleverAppId) {
-        const body = `
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <title>Clever Ripper</title>
-            <meta name="robots" content="noindex, nofollow">
-            <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-          </head>
-          <body style="background-color: rgb(55,55,55); color: white; width: 100vw; height: 100vh; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; flex-direction: column;">
-            <img style="width: 240px; margin-bottom: 40px;" src="https://www.otoroshi.io/assets/images/logos/otoroshi.png">
-            <h3>Your app is starting, please wait ...</h3>
-            <h5>You will be redirected automatically when it's ready</h5>
-            <script type="text/javascript">
-              function checkState() {
-                // TODO: use self url ???
-                fetch('${SELF_SCHEME}://${SELF_HOST}/status/${serviceId}/${cleverAppId}').then(r => r.json()).then(status => {
-                  if (status.status === 'READY') {
-                    window.location.reload();
-                  }
-                  if (status.status === 'SHOULD_BE_UP') {
-                    window.location.reload();
-                  }
-                });
-              }
-              setInterval(checkState, 10000);
-            </script>
-          </body>
-        </html>
-        `;
-        fetchAppDeploymentStatus(cleverAppId).then(status => {
-          if (status === 'SHOULD_BE_DOWN') {
-            startCleverApp(cleverAppId).then(() => {
-              // TODO: should add a task and check status in that task
-              res.type('html').send(body);
-            }).catch(e => {
-              res.status(500).send({ error: e.message });
-            });
-          } else {
-            res.type('html').send(body);
-          }
-        });
-      } else {
-        res.status(500).send({ error: 'No clever app ???' });
-      }
-    });
-  } else {
-    res.status(500).send({ error: 'No service ????' });
-  }
+function checkDeploymentStatus(serviceId, cleverAppId) {
+  console.log(`checkDeploymentStatus for ${serviceId} - ${cleverAppId}`);
+  fetchAppDeploymentStatus(cleverAppId).then(status => {
+    const currentStatus = redeployCache.get(serviceId);
+    if (status === 'SHOULD_BE_DOWN' && currentStatus == 'DOWN') {
+      startCleverApp(cleverAppId).then(() => {
+        redeployCache.set(serviceId, 'STARTING', 2 * 60000);
+        StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
+      }).catch(e => {
+        redeployCache.set(serviceId, 'DOWN', 2 * 60000);
+        StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
+      });
+    } else if (status === 'WANTS_TO_BE_UP') {
+      redeployCache.set(serviceId, 'STARTING', 2 * 60000);
+      StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
+    } else if (status === 'SHOULD_BE_UP' && currentStatus === 'STARTING') {
+      redeployCache.set(serviceId, 'ROUTING', 2 * 60000);
+      fetchOtoroshiService(serviceId).then(service => {
+        if (service.metadata['clever.ripper.waiting'] === 'true') {
+          routeOtoroshiToClever(service).then(() => {
+            redeployCache.set(serviceId, 'READY', 2 * 60000);
+          }).catch(e => {
+            redeployCache.set(serviceId, 'ROUTING', 2 * 60000);
+            StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
+          });
+        } else {
+          redeployCache.set(serviceId, 'READY', 2 * 60000);
+          StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
+        }
+      }).catch(e => {
+        redeployCache.set(serviceId, 'ROUTING', 2 * 60000);
+        StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
+      });
+    } else if (status === 'SHOULD_BE_UP' && currentStatus === 'ROUTING') {
+      redeployCache.set(serviceId, 'ROUTING', 2 * 60000);
+      StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
+    } else if (status === 'SHOULD_BE_UP' && currentStatus === 'READY') {
+      console.log('Done restarting ' + serviceId);
+    } else {
+      redeployCache.set(serviceId, 'DOWN', 2 * 60000);
+      StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
+    }
+  });
 }
 
-// TODO: should just lookup in some kind of task cache
-function requestCleverAppStatus(req, res) {
-  const cleverAppId = req.params.cleverAppId;
-  const serviceId = req.params.serviceId;
-  if (cleverAppId && serviceId) {
-    fetchAppDeploymentStatus(cleverAppId).then(status => {
-      if (status === 'SHOULD_BE_UP') {
-        fetchOtoroshiService(serviceId).then(service => {
-          if (service.metadata['clever.ripper.waiting'] === 'true') {
-            routeOtoroshiToClever(service).then(() => {
-              res.send({ status: 'READY' });
-            })
-          } else {
-            res.send({ status });
+function requestToStartCleverApp(req, res) {
+  const header = req.get('CleverRipper');
+  if (header && header === 'status') {
+    const body = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <title>Clever Ripper</title>
+        <meta name="robots" content="noindex, nofollow">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+      </head>
+      <body style="background-color: rgb(55,55,55); color: white; width: 100vw; height: 100vh; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+        <img style="width: 240px; margin-bottom: 40px;" src="https://www.otoroshi.io/assets/images/logos/otoroshi.png">
+        <h3>Your app is starting, please wait ...</h3>
+        <h5>You will be redirected automatically when it's ready</h5>
+        <script type="text/javascript">
+          function checkState() {
+            fetch(window.location.pathname, {
+              headers: {
+                Accept: 'application/json',
+                CleverRipper: 'status',
+              }
+            }).then(r => r.json()).then(status => {
+              console.log(status.status)
+              if (status.status === 'READY') {
+                window.location.reload();
+              }
+            });
           }
-        }).catch(e => {
-          res.status(500).send({ error: e.message });
-        });
-      } else {
-        res.send({ status });
-      }
-    }).catch(e => {
-      res.status(500).send({ error: e.message });
-    });
+          setInterval(checkState, 10000);
+        </script>
+      </body>
+    </html>
+    `;
+    res.type('html').send(body);
   } else {
-    res.status(500).send({ error: 'No service or app ????' });
+    const serviceId = req.params.serviceId;
+    if (serviceId) {
+      const currentStatus = redeployCache.get(serviceId); // should be DOWN | STARTING | ROUTING | READY
+      if (currentStatus) {
+        res.send({ status: currentStatus });
+      } else {
+        console.log('Waking up app for service ' + serviceId)
+        redeployCache.set(serviceId, 'DOWN', 2 * 60000);
+        appIdForService(serviceId).then(cleverAppId => {  
+          if (cleverAppId) {
+            StatusCheckQueue.executeNext(() => checkDeploymentStatus(serviceId, cleverAppId));
+          } else {
+            redeployCache.delete(serviceId);
+            console.log(`No clever app for service ${serviceId}`);
+          }
+        });
+      }
+    }
   }
 }
 
@@ -330,7 +378,6 @@ if (process.env.ONE_SHOT === 'true') {
   const port = process.env.PORT || 8080;
   app.all('/waiting-page/:serviceId/', requestToStartCleverApp);
   app.all('/waiting-page/:serviceId/*', requestToStartCleverApp);
-  app.get('/status/:serviceId/:cleverAppId', requestCleverAppStatus);
   app.listen(port, () => {
     console.log(`Clever ripper listening on port ${port}!`);
     checkServicesToShutDown();
