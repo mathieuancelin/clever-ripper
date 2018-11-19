@@ -103,7 +103,8 @@ function fetchRipperEnabledOtoroshiServices() {
 
 function fetchOtoroshiEventsForService(id) {
   const now = Date.now();
-  return fetch(`${OTOROSHI_URL}/api/services/${id}/stats?from=${now - TIME_WITHOUT_REQUEST}&to=${now}`, {
+  return fetch(`${OTOROSHI_URL}/api/services/${id}/events?from=${now - TIME_WITHOUT_REQUEST}&to=${now}&pageSize=5`, {
+  //return fetch(`${OTOROSHI_URL}/api/services/${id}/stats?from=${now - TIME_WITHOUT_REQUEST}&to=${now}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -116,6 +117,8 @@ function fetchOtoroshiEventsForService(id) {
     } else {
       return Promise.reject('Bad status: ' + r.status);
     }
+  }).then(arr => {
+    return { hits: { count: arr.length } };
   });
 }
 
@@ -369,6 +372,7 @@ function requestToStartCleverApp(req, res) {
               window.location.reload();
             });
           }
+          checkState();
           setInterval(checkState, 10000);
         </script>
       </body>
