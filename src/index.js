@@ -4,7 +4,7 @@ const moment = require('moment');
 const express = require('express');
 const { CleverCloudClient } = require('./clever');
 const { TaskQueue } = require('./tasks');
-const { Cache } = require('./Cache');
+const { Cache } = require('./cache');
 
 const OTOROSHI_URL = process.env.OTOROSHI_URL;
 const OTOROSHI_HOST = process.env.OTOROSHI_HOST;
