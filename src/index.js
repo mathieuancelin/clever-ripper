@@ -25,7 +25,7 @@ const RUN_EVERY = parseInt(process.env.RUN_EVERY || (60000 + ''), 10);
 
 function checkIfExist(label, what) {
   if (!what) {
-    throw new Error(label + ' is not defined');
+    throw new Error(label + ' does not exist in env. variables');
   }
 }
 
@@ -361,6 +361,7 @@ function requestToStartCleverApp(req, res) {
       }
     }
   } else {
+    const serviceId = req.params.serviceId;
     templateCache.getAsync(serviceId, () => {
       return fetchOtoroshiTemplate(serviceId).then(r => {
         const js = `
@@ -452,9 +453,9 @@ function requestToStartCleverApp(req, res) {
           </body>
         </html>
         `);
-
+    }).then(template => {
+      res.type('html').send(template);
     });
-    res.type('html').send();
   }
 }
 
@@ -494,6 +495,7 @@ if (process.env.ONE_SHOT === 'true') {
     if (instanceType === 'build') {
       console.log('On clever build instance, doing nothing !!!');
     } else {
+      checkServicesToShutDown();
       setTimeout(() => {
         setInterval(checkServicesToShutDown, RUN_EVERY);
       }, 10000);
