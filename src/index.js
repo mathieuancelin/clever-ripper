@@ -331,6 +331,9 @@ function checkDeploymentStatus(serviceId, cleverAppId) {
       StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
     } else if (status === 'SHOULD_BE_UP' && currentStatus === 'READY') {
       console.log('Done restarting ' + serviceId);
+    }  else if (status === 'SHOULD_BE_UP' && currentStatus === 'DOWN') {
+      redeployCache.set(serviceId, 'READY', 2 * 60000);
+      console.log('App was already up: ' + serviceId);
     } else {
       redeployCache.set(serviceId, 'DOWN', 2 * 60000);
       StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
