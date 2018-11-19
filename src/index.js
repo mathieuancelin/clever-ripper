@@ -91,7 +91,7 @@ function fetchRipperEnabledOtoroshiServices() {
   return fetchOtoroshiServices().then(services => {
     return services.filter(service => {
       const lastRestart = parseInt(service.metadata['clever.ripper.restartAtMillis'] || '0', 10);
-      if (service.metadata['clever.ripper.enabled'] === 'true') console.log(lastRestart, (Date.now() - RUN_EVERY), service.metadata);
+      if (service.metadata['clever.ripper.enabled'] === 'true') console.log(lastRestart < (Date.now() - RUN_EVERY), service.metadata);
       return service.metadata 
         && service.metadata['clever.ripper.enabled'] 
         && service.metadata['clever.ripper.enabled'] === 'true'
