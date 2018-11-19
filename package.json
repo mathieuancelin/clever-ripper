@@ -8,8 +8,8 @@
   "engines": {
     "node": "^10"
   },
-  "script": {
-    "start": "node ./scr/index.js"
+  "scripts": {
+    "start": "node ./src/index.js"
   },
   "dependencies": {
     "base-64": "0.1.0",

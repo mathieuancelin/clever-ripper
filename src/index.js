@@ -238,7 +238,7 @@ function appIdForService(id) {
 function checkServicesToShutDown() {
   console.log('Checking otoroshi services ...')
   fetchRipperEnabledOtoroshiServices().then(services => {
-    console.log(services.map(s => s.name))
+    // console.log(services.map(s => s.name))
     services.map(service => {
       CleverQueue.enqueue(() => {
         console.log(`Checking last events for ${service.name}....`);
@@ -382,6 +382,7 @@ if (process.env.ONE_SHOT === 'true') {
   const stateRespHeader = process.env.STATE_RESP_HEADER = 'Otoroshi-State-Resp';
   function otoroshiMiddleware(req, res, next) {
     res.set(stateRespHeader, req.get(stateHeader) || 'none');
+    next();
   }
   app.use(otoroshiMiddleware);
   app.all('/waiting-page/:serviceId/', requestToStartCleverApp);
