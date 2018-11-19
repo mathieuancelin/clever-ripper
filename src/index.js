@@ -91,7 +91,7 @@ function fetchRipperEnabledOtoroshiServices() {
   return fetchOtoroshiServices().then(services => {
     return services.filter(service => {
       const lastRestart = parseInt(service.metadata['clever.ripper.restartAtMillis'] || '0', 10);
-      if (service.metadata['clever.ripper.enabled'] === 'true') console.log(lastRestart < (Date.now() - RUN_EVERY), service.metadata);
+      // if (service.metadata['clever.ripper.enabled'] === 'true') console.log(lastRestart < (Date.now() - RUN_EVERY), service.metadata);
       return service.metadata 
         && service.metadata['clever.ripper.enabled'] 
         && service.metadata['clever.ripper.enabled'] === 'true'
@@ -243,7 +243,7 @@ function checkServicesToShutDown() {
       CleverQueue.enqueue(() => {
         console.log(`Checking last events for ${service.name}....`);
         fetchOtoroshiEventsForService(service.id).then(stats => {
-          console.log(`Hits for ${service.name} in last ${TIME_WITHOUT_REQUEST} ms: ${stats.hits}`);
+          console.log(`Hits for ${service.name} in last ${TIME_WITHOUT_REQUEST} ms: ${JSON.stringify(stats.hits)}`);
           if (stats.hits && stats.hits.count === 0) {
             const cleverAppId = service.metadata['clever.ripper.appId'];
             if (cleverAppId) {
@@ -378,6 +378,12 @@ if (process.env.ONE_SHOT === 'true') {
 } else {
   const app = express()
   const port = process.env.PORT || 8080;
+  const stateHeader = process.env.STATE_HEADER = 'Otoroshi-State';
+  const stateRespHeader = process.env.STATE_RESP_HEADER = 'Otoroshi-State-Resp';
+  function otoroshiMiddleware(req, res, next) {
+    res.set(stateRespHeader, req.get(stateHeader) || 'none');
+  }
+  app.use(otoroshiMiddleware);
   app.all('/waiting-page/:serviceId/', requestToStartCleverApp);
   app.all('/waiting-page/:serviceId/*', requestToStartCleverApp);
   app.listen(port, () => {
