@@ -53,12 +53,13 @@ class TaskQueue {
 
   enqueue(task) {
     this.queue.push(task);
+    this.executeNext();
   }
 
   enqueueIn(millis) {
     return (task) => {
       setTimeout(() => {
-        this.queue.push(task);
+        this.enqueue(task);
       }, millis);
     };
   }
