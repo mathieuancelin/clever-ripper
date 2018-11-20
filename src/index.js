@@ -238,10 +238,14 @@ function routeOtoroshiToClever(service) {
               'Content-Type': 'application/json',
               'Accept': 'application/json'
             },
-            body: JSON.stringify({ payload: JSON.stringify({
+            body: JSON.stringify({ 
               username: 'clever-ripper',
-              text: `Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`
-            })})
+              text: `Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`,
+              payload: JSON.stringify({
+                username: 'clever-ripper',
+                text: `Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`
+              })
+            })
           });
         }
       });
