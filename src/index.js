@@ -161,13 +161,18 @@ function routeOtoroshiToRipper(service) {
   console.log('Routing service to the ripper');
   const oldTargets = JSON.stringify(service.targets);
   const oldRoot = service.root;
-  // TODO: change timeout
+  const oldRetries = service.clientConfig.retries;
+  const oldTimeout = service.clientConfig.callTimeout;
+  const oldGlobalTimeout = service.clientConfig.globalTimeout;
   const newMetadata = {
     ...service.metadata,
     'clever.ripper.shutdownAtMillis': Date.now() + '',
     'clever.ripper.shutdownAt': moment().format('DD/MM/YYYY hh:mm:ss'),
     'clever.ripper.targets': oldTargets,
     'clever.ripper.root': oldRoot,
+    'clever.ripper.retries': oldRetries + '',
+    'clever.ripper.timeout': oldTimeout + '',
+    'clever.ripper.gtimeout': oldGlobalTimeout + '',
     'clever.ripper.waiting': 'true',
   };
   Object.keys(newMetadata).map(key => {
@@ -192,7 +197,13 @@ function routeOtoroshiToRipper(service) {
         }
       ],
       root: `/waiting-page/${service.id}/`,
-      metadata: newMetadata
+      metadata: newMetadata,
+      clientConfig: {
+        ...service.clientConfig,
+        retries: 10,
+        callTimeout: 60000,
+        globalTimeout: 10 * 60000
+      }
     })
   }).then(r => {
     if (r.status == 200) {
@@ -207,7 +218,9 @@ function routeOtoroshiToClever(service) {
   console.log('Routing service to clever app');
   const oldTargets = JSON.parse(service.metadata['clever.ripper.targets']);
   const oldRoot = service.metadata['clever.ripper.root'];
-  // TODO: set timeout back
+  const oldRetries = parseInt(service.metadata['clever.ripper.retries'] || '1', 10);
+  const oldTimeout = parseInt(service.metadata['clever.ripper.timeout'] || '30000', 10);
+  const oldGlobalTimeout = parseInt(service.metadata['clever.ripper.gtimeout'] || '30000', 10);
   const newMetadata = {
     ...service.metadata,
     'clever.ripper.restartAtMillis': Date.now() + '',
@@ -215,7 +228,13 @@ function routeOtoroshiToClever(service) {
     'clever.ripper.waiting': 'false',
   };
   Object.keys(newMetadata).map(key => {
-    if (key === 'clever.ripper.targets' || key === 'clever.ripper.root' || key === 'clever.ripper.shutdownAt' || key === 'clever.ripper.shutdownAtMillis') {
+    if (key === 'clever.ripper.targets' 
+        || key === 'clever.ripper.retries'
+        || key === 'clever.ripper.timeout'
+        || key === 'clever.ripper.gtimeout'
+        || key === 'clever.ripper.root' 
+        || key === 'clever.ripper.shutdownAt' 
+        || key === 'clever.ripper.shutdownAtMillis') {
       delete newMetadata[key];
     }
   });
@@ -263,7 +282,13 @@ function routeOtoroshiToClever(service) {
       ...service,
       targets: oldTargets,
       root: oldRoot,
-      metadata: newMetadata
+      metadata: newMetadata,
+      clientConfig: {
+        ...service.clientConfig,
+        retries: oldRetries,
+        callTimeout: oldTimeout,
+        globalTimeout: oldGlobalTimeout
+      }
     })
   }).then(r => {
     if (r.status == 200) {
