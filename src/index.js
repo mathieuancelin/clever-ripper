@@ -282,6 +282,18 @@ function routeOtoroshiToClever(service) {
     const appId = service.metadata['clever.ripper.appId'];
     const shutdownAtMillis = parseInt(service.metadata['clever.ripper.shutdownAtMillis'] || (Date.now() + ''), 10);
     if (appId) {
+      if (mongoStuff) {
+        mongoStuff.collection.updateOne(
+          { serviceId: service.id, appId: appId }, 
+          { serviceId: service.id, appId: appId, name: service.name, saved: 0.0 }, 
+          { upsert: true }
+        )
+        mongoStuff.collection.updateOne(
+          { serviceId: "global", appId: "global" }, 
+          { serviceId: "global", appId: "global", name: service.name, saved: 0.0 }, 
+          { $inc: { saved: saved } },
+        )
+      }
       cleverClient.getApp(appId).then(app => {
         const instance = app.instance;
         const minFlavorPrice = instance.minFlavor.price;
@@ -294,18 +306,17 @@ function routeOtoroshiToClever(service) {
         if (mongoStuff) {
           mongoStuff.collection.updateOne(
             { serviceId: service.id, appId: appId }, 
-            { serviceId: service.id, appId: appId, name: service.name, $inc: { saved: saved } },
-            { upsert: true }
+            { $inc: { saved: saved } },
           )
           mongoStuff.collection.updateOne(
             { serviceId: "global", appId: "global" }, 
-            { serviceId: "global", appId: "global", name: "clever-ripper", $inc: { saved: saved } },
-            { upsert: true }
+            { $inc: { saved: saved } },
           )
         }
       });
     }
   });
+  
   return fetch(`${OTOROSHI_URL}/api/services/${service.id}`, {
     method: 'PUT',
     headers: {
