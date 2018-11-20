@@ -314,6 +314,7 @@ function checkDeploymentStatus(serviceId, cleverAppId) {
         if (service.metadata['clever.ripper.waiting'] === 'true') {
           return routeOtoroshiToClever(service).then(() => {
             redeployCache.set(serviceId, 'READY', 2 * 60000);
+            StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
           }).catch(e => {
             redeployCache.set(serviceId, 'ROUTING', 2 * 60000);
             StatusCheckQueue.enqueueIn(2000)(() => checkDeploymentStatus(serviceId, cleverAppId));
@@ -374,6 +375,23 @@ function requestToStartCleverApp(req, res) {
           StatusCheckQueue.enqueue(() => checkDeploymentStatus(serviceId, cleverAppId));
         }
       });
+    }
+
+    const accept = req.get('Accept');
+    if (accept.indexOf('html') === -1) {
+      const path = req.path.replace(`/waiting-page/${serviceId}/`, '/');
+      function checkForCompletion() {
+        const currentStatus = redeployCache.get(serviceId);
+        if (currentStatus === 'READY') {
+          console.log('Call released ...')
+          res.status(307).set('Location', path).send({ redirect: 'Your app has started, re-run the call ...' });
+        } else {
+          console.log('Call still waiting for 2 sec');
+          setTimeout(() => checkForCompletion(), 2000);
+        }
+      }
+      checkForCompletion();
+      return;
     }
 
     templateCache.getAsync(serviceId, () => {
