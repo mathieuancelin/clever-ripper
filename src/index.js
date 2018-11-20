@@ -307,7 +307,10 @@ function routeOtoroshiToClever(service) {
         const minFlavorPrice = instance.minFlavor.price;
         const minInstance = instance.minInstances;
         const savedPerDrop = minInstance * minFlavorPrice;
-        const duration = (Date.now() - shutdownAtMillis) / 600000;
+        let duration = (Date.now() - shutdownAtMillis) / 600000;
+        if (duration <= 0.0) {
+          duration = 1;
+        }
         const saved = parseFloat((duration * savedPerDrop * 0.0097).toFixed(5));
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
         sendToChat(`Saved at least ${saved} € for service ${service.name}`);
