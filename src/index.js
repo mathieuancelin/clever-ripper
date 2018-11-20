@@ -18,6 +18,7 @@ const CLEVER_ORGA = process.env.CLEVER_ORGA;
 const SELF_HOST = process.env.SELF_HOST;
 const SELF_SCHEME = process.env.SELF_SCHEME;
 const DRY_MODE = process.env.DRY_MODE === 'true';
+const CHAT_URL = process.env.CHAT_URL;
 
 const ONE_HOUR = 3600 * 1000;
 const TIME_WITHOUT_REQUEST = parseInt(process.env.TIME_WITHOUT_REQUEST || (ONE_HOUR + ''), 10);
@@ -224,11 +225,23 @@ function routeOtoroshiToClever(service) {
         const instance = app.instance;
         const minFlavorPrice = instance.minFlavor.price;
         const minInstance = instance.minInstances;
-        const savedPerMs = (minInstance * minFlavorPrice) / 24 / 3600 / 1000;
-        const duration = Date.now() - shutdownAtMillis;
-        const saved = duration * savedPerMs;
-        // TODO: call slack bot
+        const savedPerDrop = minInstance * minFlavorPrice;
+        const duration = (Date.now() - shutdownAtMillis) / 600000;
+        const saved = duration * savedPerDrop * 0.0097;
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
+        if (CHAT_URL) {
+          fetch(CHAT_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ payload: JSON.stringify({
+              username: 'clever-ripper',
+              body: `Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`
+            })})
+          });
+        }
       });
     }
   });
