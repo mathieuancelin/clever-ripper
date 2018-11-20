@@ -227,7 +227,7 @@ function routeOtoroshiToClever(service) {
         const minInstance = instance.minInstances;
         const savedPerDrop = minInstance * minFlavorPrice;
         const duration = (Date.now() - shutdownAtMillis) / 600000;
-        const saved = duration * savedPerDrop * 0.0097;
+        const saved = (duration * savedPerDrop * 0.0097).toFixed(3);
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
         if (CHAT_URL) {
           fetch(CHAT_URL, {
