@@ -311,6 +311,7 @@ function routeOtoroshiToClever(service) {
         if (duration <= 1.0) {
           duration = 1.0;
         }
+        duration = Math.ceil(duration);
         const saved = parseFloat((duration * savedPerDrop * 0.0097).toFixed(5));
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
         sendToChat(`Saved at least *${saved} €* for service *${service.name}*`);
