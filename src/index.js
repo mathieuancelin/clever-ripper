@@ -216,6 +216,22 @@ function routeOtoroshiToClever(service) {
       delete newMetadata[key];
     }
   });
+  CleverQueue.enqueue(() => {
+    const appId = service.metadata['clever.ripper.appId'];
+    const shutdownAtMillis = parseInt(service.metadata['clever.ripper.shutdownAtMillis'] || (Date.now() + ''), 10);
+    if (appId) {
+      cleverClient.getApp(appId).then(app => {
+        const instance = app.instance;
+        const minFlavorPrice = instance.minFlavor.price;
+        const minInstance = instance.minInstances;
+        const savedPerMs = (minInstance * minFlavorPrice) / 24 / 3600 / 1000;
+        const duration = Date.now() - shutdownAtMillis;
+        const saved = duration * savedPerMs;
+        // TODO: call slack bot
+        console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
+      });
+    }
+  });
   return fetch(`${OTOROSHI_URL}/api/services/${service.id}`, {
     method: 'PUT',
     headers: {
