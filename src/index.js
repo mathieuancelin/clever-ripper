@@ -53,8 +53,9 @@ if (mongoUri && mongoDbName) {
     if (err) {
       return console.log(err)
     } else {
+      const db = client.db(mongoDbName);
       mongoStuff = {
-        db: client.db(mongoDbName),
+        db,
         collection: db.collection('savings')
       };
     }
