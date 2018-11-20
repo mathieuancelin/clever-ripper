@@ -19,6 +19,8 @@ const SELF_HOST = process.env.SELF_HOST;
 const SELF_SCHEME = process.env.SELF_SCHEME;
 const DRY_MODE = process.env.DRY_MODE === 'true';
 const CHAT_URL = process.env.CHAT_URL;
+const mongoUri = process.env.MONGODB_ADDON_URI;
+const mongoDbName = process.env.MONGODB_ADDON_DB;
 
 const ONE_HOUR = 3600 * 1000;
 const TIME_WITHOUT_REQUEST = parseInt(process.env.TIME_WITHOUT_REQUEST || (ONE_HOUR + ''), 10);
@@ -41,6 +43,21 @@ checkIfExist('CLEVER_SECRET', CLEVER_SECRET);
 checkIfExist('CLEVER_ORGA', CLEVER_ORGA); 
 checkIfExist('SELF_HOST', SELF_HOST); 
 checkIfExist('SELF_SCHEME', SELF_SCHEME); 
+
+let mongoStuff = null;
+
+if (mongoUri && mongoDbName) {
+  MongoClient.connect(mongoUri, (err, client) => {
+    if (err) {
+      return console.log(err)
+    } else {
+      mongoStuff = {
+        db: client.db(mongoDbName),
+        collection: db.collection('savings')
+      };
+    }
+  });
+}
 
 const CleverQueue = new TaskQueue();
 const StatusCheckQueue = new TaskQueue();
@@ -268,9 +285,21 @@ function routeOtoroshiToClever(service) {
         const minInstance = instance.minInstances;
         const savedPerDrop = minInstance * minFlavorPrice;
         const duration = (Date.now() - shutdownAtMillis) / 600000;
-        const saved = (duration * savedPerDrop * 0.0097).toFixed(5);
+        const saved = parseFloat((duration * savedPerDrop * 0.0097).toFixed(5));
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
         sendToChat(`Saved at least ${saved} € for service ${service.name}`);
+        if (mongoStuff) {
+          mongoStuff.collection.updateOne(
+            { serviceId: service.id, appId: appId }, 
+            { serviceId: service.id, appId: appId, name: service.name, $inc: { saved: saved } },
+            { upsert: true }
+          )
+          mongoStuff.collection.updateOne(
+            { serviceId: "global", appId: "global" }, 
+            { serviceId: "global", appId: "global", name: "clever-ripper", $inc: { saved: saved } },
+            { upsert: true }
+          )
+        }
       });
     }
   });
