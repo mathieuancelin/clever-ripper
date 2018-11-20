@@ -313,7 +313,7 @@ function routeOtoroshiToClever(service) {
         }
         const saved = parseFloat((duration * savedPerDrop * 0.0097).toFixed(5));
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
-        sendToChat(`Saved at least *${saved}* € for service *${service.name}*`);
+        sendToChat(`Saved at least *${saved} €* for service *${service.name}*`);
         if (mongoStuff) {
           mongoStuff.collection.updateOne(
             { serviceId: service.id, appId: appId }, 
@@ -327,7 +327,7 @@ function routeOtoroshiToClever(service) {
               { serviceId: "global", appId: "global" }
             ).then(doc => {
               if (doc) {
-                sendToChat(`Saved at least *${doc.saved}* € for all services`);
+                sendToChat(`Saved at least *${doc.saved} €* for all services`);
               }
             });
           });
