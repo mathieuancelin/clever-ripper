@@ -161,6 +161,7 @@ function routeOtoroshiToRipper(service) {
   console.log('Routing service to the ripper');
   const oldTargets = JSON.stringify(service.targets);
   const oldRoot = service.root;
+  // TODO: change timeout
   const newMetadata = {
     ...service.metadata,
     'clever.ripper.shutdownAtMillis': Date.now() + '',
@@ -206,6 +207,7 @@ function routeOtoroshiToClever(service) {
   console.log('Routing service to clever app');
   const oldTargets = JSON.parse(service.metadata['clever.ripper.targets']);
   const oldRoot = service.metadata['clever.ripper.root'];
+  // TODO: set timeout back
   const newMetadata = {
     ...service.metadata,
     'clever.ripper.restartAtMillis': Date.now() + '',
@@ -227,7 +229,7 @@ function routeOtoroshiToClever(service) {
         const minInstance = instance.minInstances;
         const savedPerDrop = minInstance * minFlavorPrice;
         const duration = (Date.now() - shutdownAtMillis) / 600000;
-        const saved = (duration * savedPerDrop * 0.0097).toFixed(3);
+        const saved = (duration * savedPerDrop * 0.0097).toFixed(5);
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
         if (CHAT_URL) {
           fetch(CHAT_URL, {
@@ -238,7 +240,7 @@ function routeOtoroshiToClever(service) {
             },
             body: JSON.stringify({ payload: JSON.stringify({
               username: 'clever-ripper',
-              body: `Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`
+              text: `Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`
             })})
           });
         }
