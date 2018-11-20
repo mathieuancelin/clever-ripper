@@ -2,6 +2,7 @@ const fetch = require('node-fetch');
 const base64 = require('base-64');
 const moment = require('moment');
 const express = require('express');
+const MongoClient = require('mongodb').MongoClient
 const { CleverCloudClient } = require('./clever');
 const { TaskQueue } = require('./tasks');
 const { Cache } = require('./cache');
