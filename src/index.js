@@ -55,6 +55,26 @@ const cleverClient = new CleverCloudClient({
   "organization": CLEVER_ORGA,
 });
 
+function sendToChat(message) {
+  if (CHAT_URL) {
+    fetch(CHAT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ 
+        username: 'clever-ripper',
+        text: message,
+        payload: JSON.stringify({
+          username: 'clever-ripper',
+          text: message
+        })
+      })
+    });
+  }
+}
+
 function fetchOtoroshiServices() {
   return fetch(`${OTOROSHI_URL}/api/services`, {
     method: 'GET',
@@ -250,23 +270,7 @@ function routeOtoroshiToClever(service) {
         const duration = (Date.now() - shutdownAtMillis) / 600000;
         const saved = (duration * savedPerDrop * 0.0097).toFixed(5);
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
-        if (CHAT_URL) {
-          fetch(CHAT_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({ 
-              username: 'clever-ripper',
-              text: `Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`,
-              payload: JSON.stringify({
-                username: 'clever-ripper',
-                text: `Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`
-              })
-            })
-          });
-        }
+        sendToChat(`Saved at least ${saved} € for service ${service.name}`);
       });
     }
   });
@@ -336,6 +340,7 @@ function checkServicesToShutDown() {
                     return routeOtoroshiToRipper(service).then(() => {
                       return shutdownCleverApp(cleverAppId).then(() => {
                         console.log(`App ${cleverAppId} has been stopped. Next request will start it on the fly`);
+                        sendToChat(`App for service ${service.name} has been stopped. Next http request will start it on the fly`);
                       });
                     });
                   }
@@ -346,7 +351,6 @@ function checkServicesToShutDown() {
             }
           }
         });
-
       });
     });
   });
@@ -371,6 +375,7 @@ function checkDeploymentStatus(serviceId, cleverAppId) {
     } else if (status === 'SHOULD_BE_UP' && currentStatus === 'STARTING') {
       redeployCache.set(serviceId, 'ROUTING', 2 * 60000);
       return fetchOtoroshiService(serviceId).then(service => {
+        sendToChat(`App for service ${service.name} is now up.`);
         if (service.metadata['clever.ripper.waiting'] === 'true') {
           return routeOtoroshiToClever(service).then(() => {
             redeployCache.set(serviceId, 'READY', 2 * 60000);
