@@ -47,6 +47,7 @@ checkIfExist('SELF_SCHEME', SELF_SCHEME);
 let mongoStuff = null;
 
 if (mongoUri && mongoDbName) {
+  console.log('Connection to Mongo ...')
   MongoClient.connect(mongoUri, (err, client) => {
     if (err) {
       return console.log(err)
