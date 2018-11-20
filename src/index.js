@@ -313,7 +313,7 @@ function routeOtoroshiToClever(service) {
         }
         const saved = parseFloat((duration * savedPerDrop * 0.0097).toFixed(5));
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
-        sendToChat(`Saved at least ${saved} € for service ${service.name}`);
+        sendToChat(`Saved at least *${saved}* € for service *${service.name}*`);
         if (mongoStuff) {
           mongoStuff.collection.updateOne(
             { serviceId: service.id, appId: appId }, 
@@ -322,7 +322,15 @@ function routeOtoroshiToClever(service) {
           mongoStuff.collection.updateOne(
             { serviceId: "global", appId: "global" }, 
             { $inc: { saved: saved } },
-          )
+          ).then(() => {
+            mongoStuff.collection.findOne(
+              { serviceId: "global", appId: "global" }
+            ).then(doc => {
+              if (doc) {
+                sendToChat(`Saved at least *${doc.saved}* € for all services`);
+              }
+            });
+          });
         }
       });
     }
@@ -394,7 +402,7 @@ function checkServicesToShutDown() {
                     return routeOtoroshiToRipper(service).then(() => {
                       return shutdownCleverApp(cleverAppId).then(() => {
                         console.log(`App ${cleverAppId} has been stopped. Next request will start it on the fly`);
-                        sendToChat(`App for service ${service.name} has been stopped. Next http request will start it on the fly`);
+                        sendToChat(`App for service *${service.name}* has been stopped. Next http request will start it on the fly`);
                       });
                     });
                   }
@@ -429,7 +437,7 @@ function checkDeploymentStatus(serviceId, cleverAppId) {
     } else if (status === 'SHOULD_BE_UP' && currentStatus === 'STARTING') {
       redeployCache.set(serviceId, 'ROUTING', 2 * 60000);
       return fetchOtoroshiService(serviceId).then(service => {
-        sendToChat(`App for service ${service.name} is now up.`);
+        sendToChat(`App for service *${service.name}* is now up.`);
         if (service.metadata['clever.ripper.waiting'] === 'true') {
           return routeOtoroshiToClever(service).then(() => {
             redeployCache.set(serviceId, 'READY', 2 * 60000);
