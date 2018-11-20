@@ -283,16 +283,24 @@ function routeOtoroshiToClever(service) {
     const shutdownAtMillis = parseInt(service.metadata['clever.ripper.shutdownAtMillis'] || (Date.now() + ''), 10);
     if (appId) {
       if (mongoStuff) {
-        mongoStuff.collection.updateOne(
+        mongoStuff.collection.findOne(
           { serviceId: service.id, appId: appId }, 
-          { serviceId: service.id, appId: appId, name: service.name, saved: 0.0 }, 
-          { upsert: true }
-        )
-        mongoStuff.collection.updateOne(
-          { serviceId: "global", appId: "global" }, 
-          { serviceId: "global", appId: "global", name: service.name, saved: 0.0 }, 
-          { $inc: { saved: saved } },
-        )
+        ).then(doc => {
+          if (!doc) {
+            mongoStuff.collection.insertOne(
+              { serviceId: service.id, appId: appId, name: service.name, saved: 0.0 }, 
+            )
+          }
+        })
+        mongoStuff.collection.findOne(
+          { serviceId: "global", appId: "global" }
+        ).then(doc => {
+          if (!doc) {
+            mongoStuff.collection.insertOne(
+              { serviceId: "global", appId: "global", name: service.name, saved: 0.0 }, 
+            )
+          }
+        });
       }
       cleverClient.getApp(appId).then(app => {
         const instance = app.instance;
