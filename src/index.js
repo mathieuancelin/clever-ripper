@@ -297,7 +297,7 @@ function routeOtoroshiToClever(service) {
         ).then(doc => {
           if (!doc) {
             mongoStuff.collection.insertOne(
-              { serviceId: "global", appId: "global", name: service.name, saved: 0.0 }, 
+              { serviceId: "global", appId: "global", name: "clever-ripper", saved: 0.0 }, 
             )
           }
         });
@@ -308,8 +308,8 @@ function routeOtoroshiToClever(service) {
         const minInstance = instance.minInstances;
         const savedPerDrop = minInstance * minFlavorPrice;
         let duration = (Date.now() - shutdownAtMillis) / 600000;
-        if (duration <= 0.0) {
-          duration = 1;
+        if (duration <= 1.0) {
+          duration = 1.0;
         }
         const saved = parseFloat((duration * savedPerDrop * 0.0097).toFixed(5));
         console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
