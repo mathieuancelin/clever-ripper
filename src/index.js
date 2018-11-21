@@ -676,7 +676,7 @@ function computeSavings() {
 function displaySavings() {
   computeSavings().then(savings => {
     console.log(`Current savings are: ${JSON.stringify(savings.total)}`)
-    sendToChat(`Current savings are: *${savings.total.total} €*`);
+    sendToChat(`Current savings are: *${savings.total.total.toFixed(5)} €*`);
   });
 }
 
