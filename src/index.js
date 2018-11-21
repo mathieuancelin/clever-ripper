@@ -619,6 +619,67 @@ function requestToStartCleverApp(req, res) {
   }
 }
 
+function computeSavings() {
+  return fetchOtoroshiServices().then(services => {
+    return Promise.all(services.filter(service => {
+      return service.metadata['clever.ripper.enabled'] === 'true' && service.metadata['clever.ripper.waiting'] === 'true'
+    }).map(service => {
+      const appId = service.metadata['clever.ripper.appId'];
+      const shutdownAtMillis = parseInt(service.metadata['clever.ripper.shutdownAtMillis'] || (Date.now() + ''), 10);
+      return cleverClient.getApp(appId).then(app => {
+        const instance = app.instance;
+        const minFlavorPrice = instance.minFlavor.price;
+        const minInstance = instance.minInstances;
+        const savedPerDrop = minInstance * minFlavorPrice;
+        let duration = (Date.now() - shutdownAtMillis) / 600000;
+        if (duration <= 1.0) {
+          duration = 1.0;
+        }
+        duration = Math.ceil(duration);
+        const saved = parseFloat((duration * savedPerDrop * 0.0097).toFixed(5));
+        return { name: service.name, serviceId: service.id, appId, saved };
+      });
+    })).then(savings => {
+      const currentSaved = savings.reduce((a, b) => {
+        return a + b.saved;
+      }, 0.0);
+      if (mongoStuff) {
+        return mongoStuff.collection.find({}).toArray().then(arr => {
+          const pastSaved = arr.filter(a => a.serviceId !== 'global').reduce((a, b) => a + b.saved, 0.0)
+          return {
+            total: {
+              current: currentSaved,
+              past: pastSaved,
+              total: pastSaved + currentSaved,
+            },
+            currentSavings: savings,
+            pastSavings: arr.map(a => {
+              delete a._id;
+              return a;
+            })
+          };
+        });
+      } else {
+        return {
+          total: {
+            current: currentSaved,
+            past: 0.0,
+            total: 0.0 + currentSaved,
+          },
+          currentSavings: savings
+        };
+      }
+    }); 
+  });
+}
+
+function displaySavings() {
+  computeSavings().then(savings => {
+    console.log(`Current savings are: ${JSON.stringify(savings.total)}`)
+    sendToChat(`Current savings are: *${savings.total.total} €*`);
+  });
+}
+
 if (process.env.ONE_SHOT === 'true') {
   checkServicesToShutDown();
 } else {
@@ -633,6 +694,7 @@ if (process.env.ONE_SHOT === 'true') {
   app.use(otoroshiMiddleware);
   app.all('/waiting-page/:serviceId/', requestToStartCleverApp);
   app.all('/waiting-page/:serviceId/*', requestToStartCleverApp);
+  app.get('/api/savings', (req, res) => computeSavings().then(savings => res.send(savings)));
   app.get('/api/health', (req, res) => {
     res.status(200).send({ healthy: true, message: "Yes, I'm healthy !!!" });
   });
@@ -659,6 +721,10 @@ if (process.env.ONE_SHOT === 'true') {
       setTimeout(() => {
         setInterval(checkServicesToShutDown, RUN_EVERY);
       }, 10000);
+      displaySavings();
+      setInterval(() => {
+        displaySavings();
+      }, 4 * 3600 * 1000);
     }
   });
 }
