@@ -62,6 +62,7 @@ if (mongoUri && mongoDbName) {
   });
 }
 
+const promiseCache = {};
 const CleverQueue = new TaskQueue();
 const StatusCheckQueue = new TaskQueue();
 const appIfForServiceIdCache = new Cache();
@@ -509,22 +510,47 @@ function requestToStartCleverApp(req, res) {
     const accept = req.get('Accept') || 'none';
     if (accept.indexOf('html') < 0) {
       const path = req.path.replace(`/waiting-page/${serviceId}/`, '/');
-      const startedAt = Date.now();
-      function checkForCompletion() {
-        const currentStatus = redeployCache.get(serviceId);
-        if (Date.now() > (startedAt + (10 * 60000))) {
-          console.log('Call released but an error occured ...')
-          res.status(500).send({ error: 'App did not succeded to start' });
-        } else if (currentStatus === 'READY') {
-          console.log('Call released ...')
-          res.status(307).set('Location', path).send({ redirect: 'Your app has started, re-run the call ...' });
-        } else {
-          // console.log('Call still waiting for 2 sec');
-          setTimeout(() => checkForCompletion(), 2000);
-        }
+      let promise = promiseCache[serviceId];
+      if (!promise) {
+        promise = new Promise((success, failure) => {
+          const startedAt = Date.now();
+          function checkForCompletion() {
+            const currentStatus = redeployCache.get(serviceId);
+            if (Date.now() > (startedAt + (10 * 60000))) {
+              console.log('Call released but an error occured ...');
+              delete promiseCache[serviceId];
+              failure('App did not succeded to start');
+            } else if (currentStatus === 'READY') {
+              console.log('Call released ...')
+              delete promiseCache[serviceId];
+              success('Your app has started, re-run the call ...');
+            } else {
+              setTimeout(() => checkForCompletion(), 2000);
+            }
+          }
+          checkForCompletion();
+        });
       }
-      checkForCompletion();
-      return;
+      return promise.then(() => {
+        res.status(307).set('Location', path).send({ redirect: 'Your app has started, re-run the call ...' });
+      }, () => {
+        res.status(500).send({ error: 'App did not succeded to start' });
+      });
+      // function checkForCompletion() {
+      //   const currentStatus = redeployCache.get(serviceId);
+      //   if (Date.now() > (startedAt + (10 * 60000))) {
+      //     console.log('Call released but an error occured ...')
+      //     res.status(500).send({ error: 'App did not succeded to start' });
+      //   } else if (currentStatus === 'READY') {
+      //     console.log('Call released ...')
+      //     res.status(307).set('Location', path).send({ redirect: 'Your app has started, re-run the call ...' });
+      //   } else {
+      //     // console.log('Call still waiting for 2 sec');
+      //     setTimeout(() => checkForCompletion(), 2000);
+      //   }
+      // }
+      // checkForCompletion();
+      // return;
     }
 
     templateCache.getAsync(serviceId, () => {
