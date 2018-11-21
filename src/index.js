@@ -324,13 +324,14 @@ function routeOtoroshiToClever(service) {
             { serviceId: "global", appId: "global" }, 
             { $inc: { saved: saved } },
           ).then(() => {
-            mongoStuff.collection.findOne(
-              { serviceId: "global", appId: "global" }
-            ).then(doc => {
-              if (doc) {
-                sendToChat(`Saved at least *${doc.saved} €* for all services`);
-              }
-            });
+            return displaySavings();
+            // mongoStuff.collection.findOne(
+            //   { serviceId: "global", appId: "global" }
+            // ).then(doc => {
+            //   if (doc) {
+            //     sendToChat(`Saved at least *${doc.saved} €* for all services`);
+            //   }
+            // });
           });
         }
       });
