@@ -505,16 +505,20 @@ function requestToStartCleverApp(req, res) {
       });
     }
 
-    const accept = req.get('Accept');
-    if (accept.indexOf('html') === -1) {
+    const accept = req.get('Accept') || 'none';
+    if (accept.indexOf('html') < 0) {
       const path = req.path.replace(`/waiting-page/${serviceId}/`, '/');
+      const startedAt = Date.now();
       function checkForCompletion() {
         const currentStatus = redeployCache.get(serviceId);
-        if (currentStatus === 'READY') {
+        if (Date.now() > (startedAt + (10 * 60000))) {
+          console.log('Call released but an error occured ...')
+          res.status(500).send({ error: 'App did not succeded to start' });
+        } else if (currentStatus === 'READY') {
           console.log('Call released ...')
           res.status(307).set('Location', path).send({ redirect: 'Your app has started, re-run the call ...' });
         } else {
-          console.log('Call still waiting for 2 sec');
+          // console.log('Call still waiting for 2 sec');
           setTimeout(() => checkForCompletion(), 2000);
         }
       }
