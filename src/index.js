@@ -26,6 +26,7 @@ const mongoDbName = process.env.MONGODB_ADDON_DB;
 const ONE_HOUR = 3600 * 1000;
 const TIME_WITHOUT_REQUEST = parseInt(process.env.TIME_WITHOUT_REQUEST || (ONE_HOUR + ''), 10);
 const RUN_EVERY = parseInt(process.env.RUN_EVERY || (60000 + ''), 10);
+const REPORT_EVERY = parseInt(process.env.REPORT_EVERY || (4 * 3600 * 1000 + ''), 10);
 
 function checkIfExist(label, what) {
   if (!what) {
@@ -755,7 +756,7 @@ if (process.env.ONE_SHOT === 'true') {
       displaySavings();
       setInterval(() => {
         displaySavings();
-      }, 4 * 3600 * 1000);
+      }, REPORT_EVERY);
     }
   });
 }
