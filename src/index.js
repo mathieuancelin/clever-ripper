@@ -2,6 +2,7 @@ const fetch = require('node-fetch');
 const base64 = require('base-64');
 const moment = require('moment');
 const express = require('express');
+const httpProxy = require('http-proxy');
 const MongoClient = require('mongodb').MongoClient
 const { CleverCloudClient } = require('./clever');
 const { TaskQueue } = require('./tasks');
@@ -19,6 +20,7 @@ const CLEVER_ORGA = process.env.CLEVER_ORGA;
 const SELF_HOST = process.env.SELF_HOST;
 const SELF_SCHEME = process.env.SELF_SCHEME;
 const DRY_MODE = process.env.DRY_MODE === 'true';
+const PROXY_MODE = process.env.DRY_MODE === 'true';
 const CHAT_URL = process.env.CHAT_URL;
 const mongoUri = process.env.MONGODB_ADDON_URI;
 const mongoDbName = process.env.MONGODB_ADDON_DB;
@@ -63,6 +65,7 @@ if (mongoUri && mongoDbName) {
   });
 }
 
+const proxy = httpProxy.createProxyServer();
 const promiseCache = {};
 const CleverQueue = new TaskQueue();
 const StatusCheckQueue = new TaskQueue();
@@ -533,7 +536,14 @@ function requestToStartCleverApp(req, res) {
         });
       }
       return promise.then(() => {
-        res.status(307).set('Location', path).send({ redirect: 'Your app has started, re-run the call ...' });
+        if (PROXY_MODE) {
+          fetchOtoroshiService(serviceId).then(service => {
+            const target = service.targets[0];
+            proxy.web(req, res, { target: `${target.scheme}://${target.host}`, headers: { 'Host': target.host } });
+          });
+        } else {
+          res.status(307).set('Location', path).send({ redirect: 'Your app has started, re-run the call ...' });
+        }
       }, () => {
         res.status(500).send({ error: 'App did not succeded to start' });
       });
