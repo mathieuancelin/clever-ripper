@@ -109,7 +109,7 @@ function fetchOtoroshiServices() {
     if (r.status == 200) {
       return r.json();
     } else {
-      return Promise.reject('Bad status: ' + r.status);
+      return Promise.reject('[fetchOtoroshiServices] Bad status: ' + r.status);
     }
   });
 }
@@ -126,7 +126,7 @@ function fetchOtoroshiService(id) {
     if (r.status == 200) {
       return r.json();
     } else {
-      return Promise.reject('Bad status: ' + r.status);
+      return Promise.reject('[fetchOtoroshiService] Bad status: ' + r.status);
     }
   });
 }
@@ -143,7 +143,7 @@ function fetchOtoroshiTemplate(id) {
     if (r.status == 200) {
       return r.json();
     } else {
-      return Promise.reject('Bad status: ' + r.status);
+      return Promise.reject('[fetchOtoroshiTemplate] Bad status: ' + r.status);
     }
   });
 }
@@ -176,7 +176,7 @@ function fetchOtoroshiEventsForService(id) {
     if (r.status == 200) {
       return r.json();
     } else {
-      return Promise.reject('Bad status: ' + r.status);
+      return Promise.reject('[fetchOtoroshiEventsForService] Bad status: ' + r.status);
     }
   }).then(arr => {
     return { hits: { count: arr.length } };
