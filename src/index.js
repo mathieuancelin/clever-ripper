@@ -387,14 +387,14 @@ function appIdForService(id) {
 }
 
 function checkServicesToShutDown() {
-  console.log('Checking otoroshi services ...')
+  //console.log('Checking otoroshi services ...')
   fetchRipperEnabledOtoroshiServices().then(services => {
     // console.log(services.map(s => s.name))
     services.map(service => {
       CleverQueue.enqueue(() => {
         // console.log(`Checking last events for ${service.name}....`);
         fetchOtoroshiEventsForService(service.id).then(stats => {
-          console.log(`Hits for ${service.name} in last ${TIME_WITHOUT_REQUEST} ms: ${JSON.stringify(stats.hits)}`);
+          // console.log(`Hits for ${service.name} in last ${TIME_WITHOUT_REQUEST} ms: ${JSON.stringify(stats.hits)}`);
           if (stats.hits && stats.hits.count === 0) {
             const cleverAppId = service.metadata['clever.ripper.appId'];
             if (cleverAppId) {
