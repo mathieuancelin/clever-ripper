@@ -20,7 +20,7 @@ const CLEVER_ORGA = process.env.CLEVER_ORGA;
 const SELF_HOST = process.env.SELF_HOST;
 const SELF_SCHEME = process.env.SELF_SCHEME;
 const DRY_MODE = process.env.DRY_MODE === 'true';
-const PROXY_MODE = process.env.DRY_MODE === 'true';
+const PROXY_MODE = process.env.PROXY_MODE === 'true';
 const CHAT_URL = process.env.CHAT_URL;
 const mongoUri = process.env.MONGODB_ADDON_URI;
 const mongoDbName = process.env.MONGODB_ADDON_DB;
