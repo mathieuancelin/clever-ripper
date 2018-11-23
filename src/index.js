@@ -527,7 +527,9 @@ function requestToStartCleverApp(req, res) {
             } else if (currentStatus === 'READY') {
               console.log('Call released ...')
               delete promiseCache[serviceId];
-              success('Your app has started, re-run the call ...');
+              setTimeout(() => {
+                success('Your app has started, re-run the call ...');
+              }, 4000);
             } else {
               setTimeout(() => checkForCompletion(), 2000);
             }
@@ -547,21 +549,6 @@ function requestToStartCleverApp(req, res) {
       }, () => {
         res.status(500).send({ error: 'App did not succeded to start' });
       });
-      // function checkForCompletion() {
-      //   const currentStatus = redeployCache.get(serviceId);
-      //   if (Date.now() > (startedAt + (10 * 60000))) {
-      //     console.log('Call released but an error occured ...')
-      //     res.status(500).send({ error: 'App did not succeded to start' });
-      //   } else if (currentStatus === 'READY') {
-      //     console.log('Call released ...')
-      //     res.status(307).set('Location', path).send({ redirect: 'Your app has started, re-run the call ...' });
-      //   } else {
-      //     // console.log('Call still waiting for 2 sec');
-      //     setTimeout(() => checkForCompletion(), 2000);
-      //   }
-      // }
-      // checkForCompletion();
-      // return;
     }
 
     templateCache.getAsync(serviceId, () => {
