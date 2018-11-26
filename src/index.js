@@ -1,6 +1,7 @@
 const fetch = require('node-fetch');
 const base64 = require('base-64');
 const moment = require('moment');
+const _ = require('lodash');
 const express = require('express');
 const httpProxy = require('http-proxy');
 const MongoClient = require('mongodb').MongoClient
@@ -22,6 +23,7 @@ const SELF_SCHEME = process.env.SELF_SCHEME;
 const DRY_MODE = process.env.DRY_MODE === 'true';
 const PROXY_MODE = process.env.PROXY_MODE === 'true';
 const CHAT_URL = process.env.CHAT_URL;
+const TARGET_MATCH = process.env.TARGET_MATCH;
 const mongoUri = process.env.MONGODB_ADDON_URI;
 const mongoDbName = process.env.MONGODB_ADDON_DB;
 
@@ -704,8 +706,18 @@ function displaySavings() {
 }
 
 function computeCandidates() {
+  const regex = TARGET_MATCH ? new RegExp(TARGET_MATCH, 'i') : null;
   return fetchOtoroshiServices().then(services => {
-    const candidates = services.filter(s => s.enabled && s.metadata['clever.ripper.enabled'] !== 'true');
+    const candidates = services.filter(s => {
+      const ok = s.enabled && s.metadata['clever.ripper.enabled'] !== 'true';
+      if (regex) {
+        const targets = s.targets.map(t => t.host);
+        const found = _.find(targets, t => regex.test(t));
+        return ok && found;
+      } else {
+        return ok;
+      }
+    });
     return new Promise((success, failure) => {
       const results = [];
       function processNext() {
