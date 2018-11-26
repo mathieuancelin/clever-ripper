@@ -735,8 +735,9 @@ function computeCandidates() {
                       const minFlavorPrice = instance.minFlavor.price;
                       const minInstance = instance.minInstances;
                       const savedPerDrop = minInstance * minFlavorPrice;
-                      const saved = parseFloat((1.0 * savedPerDrop * 0.0097).toFixed(5));
-                      results.push({ count: hits || 0, appId, name: service.name, saved, savedDay: (saved * 24).toFixed(3) });
+                      const saved = parseFloat((((1 * 60* 60 * 1000) / 600000) * savedPerDrop * 0.0097).toFixed(5));
+                      const savedDay = parseFloat((((24 * 60* 60 * 1000) / 600000) * savedPerDrop * 0.0097).toFixed(3));
+                      results.push({ count: hits || 0, appId, name: service.name, saved, savedDay });
                       setTimeout(() => processNext(), 300);
                     } catch(e) {
                       console.log('err0', e)
@@ -781,7 +782,7 @@ function displayCandidates() {
     if (candidates.length > 0) {
       const candidatesStr = candidates.map(c => {
         if (c.saved) {
-          return ` * ${c.name}: can save *${c.saved}* / *${c.savedDay}* € per hour / day`;
+          return ` * ${c.name}: can save *${c.saved}* € / hour and *${c.savedDay}* € / day`;
         } else {
           return ` * ${c.name}`;
         }
