@@ -784,9 +784,9 @@ function displayCandidates() {
       const totalDay = candidates.reduce((a, b) => a + (b.savedDay || 0.0), 0.0).toFixed(3);
       const candidatesStr = candidates.map(c => {
         if (c.saved) {
-          return ` * ${c.name}: can save *${c.saved}* € / hour and *${c.savedDay}* € / day`;
+          return ` - ${c.name}: can save *${c.saved}* € / hour and *${c.savedDay}* € / day`;
         } else {
-          return ` * ${c.name}`;
+          return ` - ${c.name}`;
         }
       }).join('\n');
       sendToChat(`${candidates.length} candidates for clever-ripper : \n\n${candidatesStr}\n\ncan save *${totalHour}* € / hour and *${totalDay}* € / day`);
