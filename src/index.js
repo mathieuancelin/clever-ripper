@@ -81,6 +81,7 @@ const cleverClient = new CleverCloudClient({
 });
 
 function sendToChat(message) {
+  console.log(message);
   if (CHAT_URL) {
     fetch(CHAT_URL, {
       method: 'POST',
@@ -318,7 +319,7 @@ function routeOtoroshiToClever(service) {
         }
         duration = Math.ceil(duration);
         const saved = parseFloat((duration * savedPerDrop * 0.0097).toFixed(5));
-        console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
+        // console.log(`Saved at least ${saved} € for service ${service.name} / ${service.id} / ${appId}`);
         sendToChat(`Saved at least *${saved} €* for service *${service.name}*`);
         if (mongoStuff) {
           mongoStuff.collection.updateOne(
@@ -330,13 +331,6 @@ function routeOtoroshiToClever(service) {
             { $inc: { saved: saved } },
           ).then(() => {
             return displaySavings();
-            // mongoStuff.collection.findOne(
-            //   { serviceId: "global", appId: "global" }
-            // ).then(doc => {
-            //   if (doc) {
-            //     sendToChat(`Saved at least *${doc.saved} €* for all services`);
-            //   }
-            // });
           });
         }
       });
@@ -408,7 +402,7 @@ function checkServicesToShutDown() {
                   if (!DRY_MODE) {
                     return routeOtoroshiToRipper(service).then(() => {
                       return shutdownCleverApp(cleverAppId).then(() => {
-                        console.log(`App ${cleverAppId} has been stopped. Next request will start it on the fly`);
+                        // console.log(`App ${cleverAppId} has been stopped. Next request will start it on the fly`);
                         sendToChat(`App for service *${service.name}* has been stopped. Next http request will start it on the fly`);
                       });
                     });
@@ -704,13 +698,51 @@ function computeSavings() {
 
 function displaySavings() {
   computeSavings().then(savings => {
-    console.log(`Current savings are: ${JSON.stringify(savings.total)}`)
+    // console.log(`Current savings are: ${JSON.stringify(savings.total)}`)
     sendToChat(`Current savings are: *${savings.total.total.toFixed(5)} €*`);
   });
 }
 
+function computeCandidates() {
+  return fetchOtoroshiServices().then(services => {
+    const candidates = services.filter(s => s.enabled && s.metadata['clever.ripper.enabled'] !== 'true');
+    return new Promise((success, failure) => {
+      const results = [];
+      function processNext() {
+        const service = candidates.pop();
+        if (service) {
+          fetchOtoroshiEventsForService(service.id).then(count => {
+            const hits = (count.hits || { count: 0 }).count || 0;
+            if (hits === 0) {
+              results.push({ count: hits || 0, name: service.name });
+            }
+            setTimeout(() => processNext(), 300);
+          }, e => {
+            setTimeout(() => processNext(), 300);
+          });
+        } else {
+          success(results);
+        }
+      }
+      processNext();
+    });
+  });
+}
+
+function displayCandidates() {
+  computeCandidates().then(candidates => {
+    if (candidates.length > 0) {
+      const candidatesStr = candidates.map(c => {
+        return ` * ${c.name}`;
+      }).join('\n');
+      sendToChat(`Good candidates (${candidates.length}) for clever-ripper are : \n\n${candidatesStr}`);
+    }
+  });
+}
+
 if (process.env.ONE_SHOT === 'true') {
-  checkServicesToShutDown();
+  displayCandidates();
+  //checkServicesToShutDown();
 } else {
   const app = express()
   const port = process.env.PORT || 8080;
@@ -750,10 +782,14 @@ if (process.env.ONE_SHOT === 'true') {
       setTimeout(() => {
         setInterval(checkServicesToShutDown, RUN_EVERY);
       }, 10000);
-      displaySavings();
+      setTimeout(() => displaySavings(), 20000);
       setInterval(() => {
         displaySavings();
       }, REPORT_EVERY);
+      setTimeout(() => displayCandidates(), 20000);
+      setInterval(() => {
+        displayCandidates();
+      }, TIME_WITHOUT_REQUEST * 4)
     }
   });
 }
