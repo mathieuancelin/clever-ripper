@@ -780,6 +780,8 @@ function computeCandidates() {
 function displayCandidates() {
   computeCandidates().then(candidates => {
     if (candidates.length > 0) {
+      const totalHour = candidates.reduce((a, b) => a + (b.saved || 0.0), 0.0).toFixed(3);
+      const totalDay = candidates.reduce((a, b) => a + (b.savedDay || 0.0), 0.0).toFixed(3);
       const candidatesStr = candidates.map(c => {
         if (c.saved) {
           return ` * ${c.name}: can save *${c.saved}* € / hour and *${c.savedDay}* € / day`;
@@ -787,7 +789,7 @@ function displayCandidates() {
           return ` * ${c.name}`;
         }
       }).join('\n');
-      sendToChat(`Good candidates (${candidates.length}) for clever-ripper are : \n\n${candidatesStr}`);
+      sendToChat(`${candidates.length} candidates for clever-ripper : \n\n${candidatesStr}\n\ncan save *${totalHour}* € / hour and *${totalDay}* € / day`);
     }
   });
 }
