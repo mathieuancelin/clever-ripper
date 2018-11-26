@@ -662,7 +662,7 @@ function computeSavings() {
         }
         duration = Math.ceil(duration);
         const saved = parseFloat((duration * savedPerDrop * 0.0097).toFixed(5));
-        return { name: service.name, serviceId: service.id, appId, saved };
+        return { name: service.name, serviceId: service.id, appId, saved, savedDay: (saved * 24)  };
       });
     })).then(savings => {
       const currentSaved = savings.reduce((a, b) => {
@@ -726,9 +726,43 @@ function computeCandidates() {
           fetchOtoroshiEventsForService(service.id).then(count => {
             const hits = (count.hits || { count: 0 }).count || 0;
             if (hits === 0) {
-              results.push({ count: hits || 0, name: service.name });
+              if (regex) {
+                const appId = regex.exec(service.targets[0].host)[1];
+                if (appId) {
+                  cleverClient.getApp(appId.replace('app-', 'app_')).then(app => {
+                    try {
+                      const instance = app.instance;
+                      const minFlavorPrice = instance.minFlavor.price;
+                      const minInstance = instance.minInstances;
+                      const savedPerDrop = minInstance * minFlavorPrice;
+                      const saved = parseFloat((1.0 * savedPerDrop * 0.0097).toFixed(5));
+                      results.push({ count: hits || 0, name: service.name, saved });
+                      setTimeout(() => processNext(), 300);
+                    } catch(e) {
+                      console.log('err0', e)
+                      results.push({ count: hits || 0, name: service.name });
+                      setTimeout(() => processNext(), 300);
+                    }
+                  }, e => {
+                    console.log('err1', e)
+                    results.push({ count: hits || 0, name: service.name });
+                    setTimeout(() => processNext(), 300);
+                  }).catch(e => {
+                    console.log('err2', e)
+                    results.push({ count: hits || 0, name: service.name });
+                    setTimeout(() => processNext(), 300);
+                  });
+                } else {
+                  results.push({ count: hits || 0, name: service.name });
+                  setTimeout(() => processNext(), 300);
+                }
+              } else {
+                results.push({ count: hits || 0, name: service.name });
+                setTimeout(() => processNext(), 300);
+              }
+            } else {
+              setTimeout(() => processNext(), 300);
             }
-            setTimeout(() => processNext(), 300);
           }, e => {
             setTimeout(() => processNext(), 300);
           });
@@ -736,6 +770,7 @@ function computeCandidates() {
           success(_.sortBy(results, r => r.name));
         }
       }
+      processNext();
       processNext();
     });
   });
@@ -745,7 +780,11 @@ function displayCandidates() {
   computeCandidates().then(candidates => {
     if (candidates.length > 0) {
       const candidatesStr = candidates.map(c => {
-        return ` * ${c.name}`;
+        if (c.saved) {
+          return ` * ${c.name}: can save *${c.saved}*/*${c.savedDay}* € per hour / day`;
+        } else {
+          return ` * ${c.name}`;
+        }
       }).join('\n');
       sendToChat(`Good candidates (${candidates.length}) for clever-ripper are : \n\n${candidatesStr}`);
     }
