@@ -736,20 +736,20 @@ function computeCandidates() {
                       const minInstance = instance.minInstances;
                       const savedPerDrop = minInstance * minFlavorPrice;
                       const saved = parseFloat((1.0 * savedPerDrop * 0.0097).toFixed(5));
-                      results.push({ count: hits || 0, name: service.name, saved, savedDay: (saved * 24).toFixed(3) });
+                      results.push({ count: hits || 0, appId, name: service.name, saved, savedDay: (saved * 24).toFixed(3) });
                       setTimeout(() => processNext(), 300);
                     } catch(e) {
                       console.log('err0', e)
-                      results.push({ count: hits || 0, name: service.name });
+                      results.push({ count: hits || 0, appId, name: service.name });
                       setTimeout(() => processNext(), 300);
                     }
                   }, e => {
                     console.log('err1', e)
-                    results.push({ count: hits || 0, name: service.name });
+                    results.push({ count: hits || 0, appId, name: service.name });
                     setTimeout(() => processNext(), 300);
                   }).catch(e => {
                     console.log('err2', e)
-                    results.push({ count: hits || 0, name: service.name });
+                    results.push({ count: hits || 0, appId, name: service.name });
                     setTimeout(() => processNext(), 300);
                   });
                 } else {
@@ -767,7 +767,7 @@ function computeCandidates() {
             setTimeout(() => processNext(), 300);
           });
         } else {
-          success(_.sortBy(results, r => r.name));
+          success(_.sortBy(_.uniqBy(results, i => i.appId ? i.appId : i.name), r => r.name));
         }
       }
       processNext();
