@@ -733,7 +733,7 @@ function computeCandidates() {
             setTimeout(() => processNext(), 300);
           });
         } else {
-          success(results);
+          success(_.sortBy(results, r => r.name));
         }
       }
       processNext();
