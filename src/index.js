@@ -172,7 +172,7 @@ function fetchRipperEnabledOtoroshiServices(_rawServices) {
 
 function fetchOtoroshiEventsForService(id) {
   const now = Date.now();
-  return fetch(`${OTOROSHI_URL}/api/services/${id}/events?from=${now - TIME_WITHOUT_REQUEST}&to=${now}&pageSize=1`, { // Otoroshi v1.2.0+ compatible
+  return fetch(`${OTOROSHI_URL}/api/services/${id}/events?from=${now - TIME_WITHOUT_REQUEST}&to=${now}&pageSize=70`, { // Otoroshi v1.2.0+ compatible
   //return fetch(`${OTOROSHI_URL}/api/services/${id}/stats?from=${now - TIME_WITHOUT_REQUEST}&to=${now}`, {           // Otoroshi v1.3.0+ compatible
     method: 'GET',
     headers: {
@@ -187,7 +187,8 @@ function fetchOtoroshiEventsForService(id) {
       return Promise.reject('[fetchOtoroshiEventsForService] Bad status: ' + r.status);
     }
   }).then(arr => {
-    return { hits: { count: arr.length } };
+    const finalArr = arr.filter(a => JSON.stringify(a).toLowerCase().indexOf("statuscake") > -1);
+    return { hits: { count: finalArr, rawCount: arr.length } };
   });
 }
 
@@ -520,6 +521,11 @@ function checkDeploymentStatus(serviceId, cleverAppId) {
 }
 
 function requestToStartCleverApp(req, res) {
+  const userAgent = (req.get('User-Agent') || 'none').toLowerCase();
+  if(userAgent.indexOf('statuscake') > -1) {
+    res.status(200).type('json').send({ message: 'I\'m slipping !!!' })
+    return;
+  }
   const header = req.get('CleverRipper');
   if (header && header === 'status') {
     const serviceId = req.params.serviceId;
