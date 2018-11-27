@@ -410,7 +410,7 @@ function serviceMustBeUp(service) {
     }
   });
   const firstIn = _.find(slots, a => a.inSlot);
-  console.log(service.name, JSON.stringify(slots, null, 2));
+  console.log(service.name, time.format('HH:mm') + ' ' + time.format(), JSON.stringify(slots, null, 2));
   firstIn ? console.log(`${service.name} must be up`) : console.log(`${service.name} must not be up`);
   return firstIn ? true : false;
 }
