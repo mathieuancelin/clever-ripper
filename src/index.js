@@ -410,8 +410,7 @@ function serviceMustBeUp(service) {
     }
   });
   const firstIn = _.find(slots, a => a.inSlot);
-  console.log(service.name, time.format('HH:mm') + ' ' + time.format(), JSON.stringify(slots, null, 2));
-  firstIn ? console.log(`${service.name} must be up`) : console.log(`${service.name} must not be up`);
+  //console.log(service.name, time.format('HH:mm') + ' ' + time.format(), JSON.stringify(slots, null, 2));
   return firstIn ? true : false;
 }
 
@@ -426,10 +425,10 @@ function checkServicesToShutDown() {
       console.log(`${service.name} must be up now !!!`);
       const cleverAppId = service.metadata['clever.ripper.appId'];
       if (cleverAppId) {
-        if (!redeployCache.get(serviceId)) { // restart asap !!!
-          redeployCache.set(serviceId, 'DOWN', 2 * 60000);
-          console.log('Waking up app for service ' + serviceId + ' because it must be up')
-          StatusCheckQueue.enqueue(() => checkDeploymentStatus(serviceId, cleverAppId));
+        if (!redeployCache.get(service.id)) { // restart asap !!!
+          redeployCache.set(service.id, 'DOWN', 2 * 60000);
+          console.log('Waking up app for service ' + service.id + ' because it must be up')
+          StatusCheckQueue.enqueue(() => checkDeploymentStatus(service.id, cleverAppId));
         }
       }
     });
