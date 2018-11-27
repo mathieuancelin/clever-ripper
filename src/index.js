@@ -410,7 +410,8 @@ function serviceMustBeUp(service) {
     }
   });
   const firstIn = _.find(slots, a => a.inSlot);
-  //console.log(JSON.stringify(slots, null, 2));
+  console.log(service.name, JSON.stringify(slots, null, 2));
+  firstIn ? console.log(`${service.name} must be up`) : console.log(`${service.name} must not be up`);
   return firstIn ? true : false;
 }
 
@@ -435,7 +436,7 @@ function checkServicesToShutDown() {
     fetchRipperEnabledOtoroshiServices(_rawServices).then(services => {
       // console.log(services.map(s => s.name))
       services.filter(notServiceMustBeUp).map(service => {
-        console.log(`Checking if ${service.name} should be shut down ...`)
+        // console.log(`Checking if ${service.name} should be shut down ...`)
         CleverQueue.enqueue(() => {
           // console.log(`Checking last events for ${service.name}....`);
           fetchOtoroshiEventsForService(service.id).then(stats => {
@@ -847,6 +848,14 @@ if (process.env.ONE_SHOT === 'true') {
   fetchOtoroshiServices().then(_rawServices => {
     _rawServices.filter(isRipperEnabled).filter(serviceMustBeUp).map(service => {
       console.log(`${service.name} should be up`);
+    });
+    fetchRipperEnabledOtoroshiServices(_rawServices).then(services => {
+      services.filter(notServiceMustBeUp).map(s => {
+        console.log(s.name);
+        return s;
+      }).map(service => {
+        console.log(`Checking if ${service.name} should be shut down ...`)
+      })
     });
   });
 } else {
