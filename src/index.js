@@ -392,13 +392,13 @@ function isRipperEnabled(service) {
 }
 
 function serviceMustBeUp(service) {
-  const time = moment();
+  const time = moment.tz(TIMEZONE);
   console.log(time.format('HH:mm'))
   const mustBeUpDuring = service.metadata['clever.ripper.mustBeUpDuring'] || '';
   const slots = mustBeUpDuring.split(',').map(a => a.trim()).map(timeSlot => {
     const [startStr, stopStr] = timeSlot.split('-').map(a => a.trim());
-    const start = moment.tz(startStr, 'HH:mm', TIMEZONE);
-    const stop = moment.tz(stopStr, 'HH:mm', TIMEZONE);
+    const start = moment(startStr, 'HH:mm');
+    const stop = moment(stopStr, 'HH:mm');
     return {
       start,
       stop,
