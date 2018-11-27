@@ -393,10 +393,13 @@ function isRipperEnabled(service) {
 
 function serviceMustBeUp(service) {
   const time = moment.tz(TIMEZONE);
-  console.log(time.format('HH:mm') + ' ' + time.format())
+  // console.log(time.format('HH:mm') + ' ' + time.format())
   const mustBeUpDuring = service.metadata['clever.ripper.mustBeUpDuring'] || '';
-  console.log(mustBeUpDuring)
-  const slots = mustBeUpDuring.split(',').map(a => a.trim()).map(timeSlot => {
+  const rawSlots = mustBeUpDuring.split(',').filter(a => a.length > 0);
+  if (rawSlots && rawSlots.length === 0) {
+    return false;
+  }
+  const slots = rawSlots.map(a => a.trim()).map(timeSlot => {
     const [startStr, stopStr] = timeSlot.split('-').map(a => a.trim());
     const start = moment(startStr, 'HH:mm');
     const stop = moment(stopStr, 'HH:mm');
@@ -407,7 +410,7 @@ function serviceMustBeUp(service) {
     }
   });
   const firstIn = _.find(slots, a => a.inSlot);
-  console.log(JSON.stringify(slots, null, 2));
+  //console.log(JSON.stringify(slots, null, 2));
   return firstIn ? true : false;
 }
 
@@ -838,8 +841,13 @@ function displayCandidates() {
 }
 
 if (process.env.ONE_SHOT === 'true') {
-  displayCandidates();
+  //displayCandidates();
   //checkServicesToShutDown();
+  fetchOtoroshiServices().then(_rawServices => {
+    _rawServices.filter(isRipperEnabled).filter(serviceMustBeUp).map(service => {
+      console.log(`${service.name} should be up`);
+    });
+  });
 } else {
   const app = express()
   const port = process.env.PORT || 8080;
