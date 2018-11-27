@@ -422,7 +422,7 @@ function checkServicesToShutDown() {
   //console.log('Checking otoroshi services ...')
   fetchOtoroshiServices().then(_rawServices => {
     _rawServices.filter(isRipperEnabled).filter(serviceMustBeUp).map(service => {
-      console.log(`${service.name} should be up`);
+      console.log(`${service.name} must be up now !!!`);
       const cleverAppId = service.metadata['clever.ripper.appId'];
       if (cleverAppId) {
         if (!redeployCache.get(serviceId)) { // restart asap !!!
@@ -435,6 +435,7 @@ function checkServicesToShutDown() {
     fetchRipperEnabledOtoroshiServices(_rawServices).then(services => {
       // console.log(services.map(s => s.name))
       services.filter(notServiceMustBeUp).map(service => {
+        console.log(`Checking if ${service.name} should be shut down ...`)
         CleverQueue.enqueue(() => {
           // console.log(`Checking last events for ${service.name}....`);
           fetchOtoroshiEventsForService(service.id).then(stats => {
