@@ -393,7 +393,7 @@ function isRipperEnabled(service) {
 
 function serviceMustBeUp(service) {
   const time = moment.tz(TIMEZONE);
-  console.log(time.format('HH:mm'))
+  console.log(time.format('HH:mm') + ' ' + time.format())
   const mustBeUpDuring = service.metadata['clever.ripper.mustBeUpDuring'] || '';
   const slots = mustBeUpDuring.split(',').map(a => a.trim()).map(timeSlot => {
     const [startStr, stopStr] = timeSlot.split('-').map(a => a.trim());
@@ -406,6 +406,9 @@ function serviceMustBeUp(service) {
     }
   });
   const firstIn = _.find(slots, a => a.inSlot);
+  console.log(`${service.name}: ${slots.map(s => {
+    return s.start.format() + ' ' + s.top.format() + ' / ' + s.inSlot
+  })}`);
   return firstIn ? true : false;
 }
 
@@ -417,6 +420,7 @@ function checkServicesToShutDown() {
   //console.log('Checking otoroshi services ...')
   fetchOtoroshiServices().then(_rawServices => {
     _rawServices.filter(isRipperEnabled).filter(serviceMustBeUp).map(service => {
+      console.log(`${service.name} should be up`);
       const cleverAppId = service.metadata['clever.ripper.appId'];
       if (cleverAppId) {
         if (!redeployCache.get(serviceId)) { // restart asap !!!
