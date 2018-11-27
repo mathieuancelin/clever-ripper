@@ -401,8 +401,8 @@ function serviceMustBeUp(service) {
   }
   const slots = rawSlots.map(a => a.trim()).map(timeSlot => {
     const [startStr, stopStr] = timeSlot.split('-').map(a => a.trim());
-    const start = moment(startStr, 'HH:mm');
-    const stop = moment(stopStr, 'HH:mm');
+    const start = moment.tz(startStr, 'HH:mm', TIMEZONE);
+    const stop = moment.tz(stopStr, 'HH:mm', TIMEZONE);
     return {
       start: start.format(),
       stop: stop.format(),
