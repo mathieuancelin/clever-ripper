@@ -188,7 +188,7 @@ function fetchOtoroshiEventsForService(id) {
     }
   }).then(arr => {
     const finalArr = arr.filter(a => JSON.stringify(a).toLowerCase().indexOf("statuscake") > -1);
-    return { hits: { count: finalArr, rawCount: arr.length } };
+    return { hits: { count: finalArr.length, rawCount: arr.length } };
   });
 }
 
