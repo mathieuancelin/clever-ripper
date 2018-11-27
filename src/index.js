@@ -434,6 +434,8 @@ function checkServicesToShutDown() {
                 console.log('Waking up app for service ' + service.id + ' because it must be up')
                 StatusCheckQueue.enqueue(() => checkDeploymentStatus(service.id, cleverAppId));
               }
+            } else {
+              console.log(`${service.name} must be up now but is already up !!!`);
             }
           });
         });
@@ -446,7 +448,7 @@ function checkServicesToShutDown() {
         CleverQueue.enqueue(() => {
           // console.log(`Checking last events for ${service.name}....`);
           fetchOtoroshiEventsForService(service.id).then(stats => {
-            // console.log(`Hits for ${service.name} in last ${TIME_WITHOUT_REQUEST} ms: ${JSON.stringify(stats.hits)}`);
+            console.log(`Hits for ${service.name} in last ${TIME_WITHOUT_REQUEST} ms: ${JSON.stringify(stats.hits)}`);
             if (stats.hits && stats.hits.count === 0) {
               const cleverAppId = service.metadata['clever.ripper.appId'];
               if (cleverAppId) {
