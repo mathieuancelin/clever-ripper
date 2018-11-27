@@ -154,8 +154,9 @@ function fetchOtoroshiTemplate(id) {
   });
 }
 
-function fetchRipperEnabledOtoroshiServices() {
-  return fetchOtoroshiServices().then(services => {
+function fetchRipperEnabledOtoroshiServices(_rawServices) {
+  const promise = _rawServices ? Promise.resolve(_rawServices) : fetchOtoroshiServices();
+  return promise.then(services => {
     return services.filter(service => {
       const lastRestart = parseInt(service.metadata['clever.ripper.restartAtMillis'] || '0', 10);
       // if (service.metadata['clever.ripper.enabled'] === 'true') console.log(lastRestart < (Date.now() - RUN_EVERY), service.metadata);
@@ -385,36 +386,74 @@ function appIdForService(id) {
   }
 }
 
+function isRipperEnabled(service) {
+  return service.metadata['clever.ripper.enabled'] === 'true';
+}
+
+function serviceMustBeUp(service) {
+  const time = moment();
+  console.log(time.format('HH:mm'))
+  const mustBeUpDuring = service.metadata['clever.ripper.mustBeUpDuring'] || '';
+  const slots = mustBeUpDuring.split(',').map(a => a.trim()).map(timeSlot => {
+    const [startStr, stopStr] = timeSlot.split('-').map(a => a.trim());
+    const start = moment(startStr, 'HH:mm');
+    const stop = moment(stopStr, 'HH:mm');
+    return {
+      start,
+      stop,
+      inSlot: time.isBetween(start, stop)
+    }
+  });
+  const firstIn = _.find(slots, a => a.inSlot);
+  return firstIn ? true : false;
+}
+
+function notServiceMustBeUp(service) {
+  return !serviceMustBeUp(service);
+}
+
 function checkServicesToShutDown() {
   //console.log('Checking otoroshi services ...')
-  fetchRipperEnabledOtoroshiServices().then(services => {
-    // console.log(services.map(s => s.name))
-    services.map(service => {
-      CleverQueue.enqueue(() => {
-        // console.log(`Checking last events for ${service.name}....`);
-        fetchOtoroshiEventsForService(service.id).then(stats => {
-          // console.log(`Hits for ${service.name} in last ${TIME_WITHOUT_REQUEST} ms: ${JSON.stringify(stats.hits)}`);
-          if (stats.hits && stats.hits.count === 0) {
-            const cleverAppId = service.metadata['clever.ripper.appId'];
-            if (cleverAppId) {
-              appIfForServiceIdCache.set(service.id, cleverAppId, 5 * 60000);
-              return fetchAppDeploymentStatus(cleverAppId).then(status => {
-                if (status === 'SHOULD_BE_UP') {
-                  console.log(`Service ${service.name} should be shut down ...`);
-                  if (!DRY_MODE) {
-                    return routeOtoroshiToRipper(service).then(() => {
-                      return shutdownCleverApp(cleverAppId).then(() => {
-                        // console.log(`App ${cleverAppId} has been stopped. Next request will start it on the fly`);
-                        sendToChat(`App for service *${service.name}* has been stopped. Next http request will start it on the fly`);
+  fetchOtoroshiServices().then(_rawServices => {
+    _rawServices.filter(isRipperEnabled).filter(serviceMustBeUp).map(service => {
+      const cleverAppId = service.metadata['clever.ripper.appId'];
+      if (cleverAppId) {
+        if (!redeployCache.get(serviceId)) { // restart asap !!!
+          redeployCache.set(serviceId, 'DOWN', 2 * 60000);
+          console.log('Waking up app for service ' + serviceId + ' because it must be up')
+          StatusCheckQueue.enqueue(() => checkDeploymentStatus(serviceId, cleverAppId));
+        }
+      }
+    });
+    fetchRipperEnabledOtoroshiServices(_rawServices).then(services => {
+      // console.log(services.map(s => s.name))
+      services.filter(notServiceMustBeUp).map(service => {
+        CleverQueue.enqueue(() => {
+          // console.log(`Checking last events for ${service.name}....`);
+          fetchOtoroshiEventsForService(service.id).then(stats => {
+            // console.log(`Hits for ${service.name} in last ${TIME_WITHOUT_REQUEST} ms: ${JSON.stringify(stats.hits)}`);
+            if (stats.hits && stats.hits.count === 0) {
+              const cleverAppId = service.metadata['clever.ripper.appId'];
+              if (cleverAppId) {
+                appIfForServiceIdCache.set(service.id, cleverAppId, 5 * 60000);
+                return fetchAppDeploymentStatus(cleverAppId).then(status => {
+                  if (status === 'SHOULD_BE_UP') {
+                    console.log(`Service ${service.name} should be shut down ...`);
+                    if (!DRY_MODE) {
+                      return routeOtoroshiToRipper(service).then(() => {
+                        return shutdownCleverApp(cleverAppId).then(() => {
+                          // console.log(`App ${cleverAppId} has been stopped. Next request will start it on the fly`);
+                          sendToChat(`App for service *${service.name}* has been stopped. Next http request will start it on the fly`);
+                        });
                       });
-                    });
+                    }
                   }
-                }
-              });
-            } else {
-              console.log(`No clever app id specified for ${service.name}...`);
+                });
+              } else {
+                console.log(`No clever app id specified for ${service.name}...`);
+              }
             }
-          }
+          });
         });
       });
     });
