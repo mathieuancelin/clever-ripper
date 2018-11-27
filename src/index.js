@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 const base64 = require('base-64');
-const moment = require('moment');
+const moment = require('moment-timezone');
 const _ = require('lodash');
 const express = require('express');
 const httpProxy = require('http-proxy');
@@ -24,6 +24,7 @@ const DRY_MODE = process.env.DRY_MODE === 'true';
 const PROXY_MODE = process.env.PROXY_MODE === 'true';
 const CHAT_URL = process.env.CHAT_URL;
 const TARGET_MATCH = process.env.TARGET_MATCH;
+const TIMEZONE = process.env.TIMEZONE || 'Europe/Paris';
 const mongoUri = process.env.MONGODB_ADDON_URI;
 const mongoDbName = process.env.MONGODB_ADDON_DB;
 
@@ -396,8 +397,8 @@ function serviceMustBeUp(service) {
   const mustBeUpDuring = service.metadata['clever.ripper.mustBeUpDuring'] || '';
   const slots = mustBeUpDuring.split(',').map(a => a.trim()).map(timeSlot => {
     const [startStr, stopStr] = timeSlot.split('-').map(a => a.trim());
-    const start = moment(startStr, 'HH:mm');
-    const stop = moment(stopStr, 'HH:mm');
+    const start = moment.tz(startStr, 'HH:mm', TIMEZONE);
+    const stop = moment.tz(stopStr, 'HH:mm', TIMEZONE);
     return {
       start,
       stop,
