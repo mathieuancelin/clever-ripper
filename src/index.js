@@ -426,11 +426,17 @@ function checkServicesToShutDown() {
       console.log(`${service.name} must be up now !!!`);
       const cleverAppId = service.metadata['clever.ripper.appId'];
       if (cleverAppId) {
-        if (!redeployCache.get(service.id)) { // restart asap !!!
-          redeployCache.set(service.id, 'DOWN', 2 * 60000);
-          console.log('Waking up app for service ' + service.id + ' because it must be up')
-          StatusCheckQueue.enqueue(() => checkDeploymentStatus(service.id, cleverAppId));
-        }
+        CleverQueue.enqueue(() => {
+          return fetchAppDeploymentStatus(cleverAppId).then(status => {
+            if (status === 'SHOULD_BE_DOWN') {
+              if (!redeployCache.get(service.id)) { // restart asap !!!
+                redeployCache.set(service.id, 'DOWN', 2 * 60000);
+                console.log('Waking up app for service ' + service.id + ' because it must be up')
+                StatusCheckQueue.enqueue(() => checkDeploymentStatus(service.id, cleverAppId));
+              }
+            }
+          });
+        });
       }
     });
     fetchRipperEnabledOtoroshiServices(_rawServices).then(services => {
