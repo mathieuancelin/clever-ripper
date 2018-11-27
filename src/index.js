@@ -407,7 +407,7 @@ function serviceMustBeUp(service) {
   });
   const firstIn = _.find(slots, a => a.inSlot);
   console.log(`${service.name}: ${slots.map(s => {
-    return s.start.format() + ' ' + s.top.format() + ' / ' + s.inSlot
+    return s.start.format() + ' ' + s.stop.format() + ' / ' + s.inSlot
   })}`);
   return firstIn ? true : false;
 }
