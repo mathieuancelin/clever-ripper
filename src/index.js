@@ -395,20 +395,19 @@ function serviceMustBeUp(service) {
   const time = moment.tz(TIMEZONE);
   console.log(time.format('HH:mm') + ' ' + time.format())
   const mustBeUpDuring = service.metadata['clever.ripper.mustBeUpDuring'] || '';
+  console.log(mustBeUpDuring)
   const slots = mustBeUpDuring.split(',').map(a => a.trim()).map(timeSlot => {
     const [startStr, stopStr] = timeSlot.split('-').map(a => a.trim());
     const start = moment(startStr, 'HH:mm');
     const stop = moment(stopStr, 'HH:mm');
     return {
-      start,
-      stop,
+      start: start.format(),
+      stop: stop.format(),
       inSlot: time.isBetween(start, stop)
     }
   });
   const firstIn = _.find(slots, a => a.inSlot);
-  console.log(`${service.name}: ${slots.map(s => {
-    return s.start.format() + ' ' + s.stop.format() + ' / ' + s.inSlot
-  })}`);
+  console.log(JSON.stringify(slots, null, 2));
   return firstIn ? true : false;
 }
 
