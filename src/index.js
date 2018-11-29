@@ -770,7 +770,7 @@ function computeCandidates() {
   const regex = TARGET_MATCH ? new RegExp(TARGET_MATCH, 'i') : null;
   return fetchOtoroshiServices().then(services => {
     const candidates = services.filter(s => {
-      const ok = s.enabled && s.metadata['clever.ripper.enabled'] !== 'true';
+      const ok = s.enabled && s.metadata['clever.ripper.enabled'] !== 'true' && s.name.indexOf('prod') > 0;
       if (regex) {
         const targets = s.targets.map(t => t.host);
         const found = _.find(targets, t => regex.test(t));

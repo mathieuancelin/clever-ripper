@@ -586,6 +586,10 @@ ms@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.1.tgz#30a5864eb3ebb0a66f2ebe6d727af06a09d86e0a"
 
+mydaterangepicker@^4.2.1:
+  version "4.2.1"
+  resolved "https://registry.yarnpkg.com/mydaterangepicker/-/mydaterangepicker-4.2.1.tgz#f063e4747016259b9ad882159efc1c7df09221cd"
+
 negotiator@0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.1.tgz#2b327184e8992101177b28563fb5e7102acd0ca9"
