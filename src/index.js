@@ -188,7 +188,7 @@ function fetchOtoroshiEventsForService(id) {
       return Promise.reject('[fetchOtoroshiEventsForService] Bad status: ' + r.status);
     }
   }).then(arr => {
-    const finalArr = arr.filter(a => JSON.stringify(a).toLowerCase().indexOf("statuscake") > -1);
+    const finalArr = arr.filter(a => JSON.stringify(a).toLowerCase().indexOf("statuscake") === -1);
     return { hits: { count: finalArr.length, rawCount: arr.length } };
   });
 }
