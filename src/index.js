@@ -917,7 +917,7 @@ if (process.env.ONE_SHOT === 'true') {
       setTimeout(() => displayCandidates(), 20000);
       setInterval(() => {
         displayCandidates();
-      }, TIME_WITHOUT_REQUEST * 4)
+      }, TIME_WITHOUT_REQUEST * 12)
     }
   });
 }
