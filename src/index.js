@@ -24,6 +24,7 @@ const DRY_MODE = process.env.DRY_MODE === 'true';
 const PROXY_MODE = process.env.PROXY_MODE === 'true';
 const CHAT_URL = process.env.CHAT_URL;
 const TARGET_MATCH = process.env.TARGET_MATCH;
+const EXCLUDE_FROM_CANDIDATES = process.env.EXCLUDE_FROM_CANDIDATES;
 const TIMEZONE = process.env.TIMEZONE || 'Europe/Paris';
 const mongoUri = process.env.MONGODB_ADDON_URI;
 const mongoDbName = process.env.MONGODB_ADDON_DB;
@@ -770,7 +771,7 @@ function computeCandidates() {
   const regex = TARGET_MATCH ? new RegExp(TARGET_MATCH, 'i') : null;
   return fetchOtoroshiServices().then(services => {
     const candidates = services.filter(s => {
-      const ok = s.enabled && s.metadata['clever.ripper.enabled'] !== 'true' && s.name.indexOf('prod') > 0;
+      const ok = s.enabled && s.metadata['clever.ripper.enabled'] !== 'true' && !!!s.name.match(EXCLUDE_FROM_CANDIDATES);
       if (regex) {
         const targets = s.targets.map(t => t.host);
         const found = _.find(targets, t => regex.test(t));
