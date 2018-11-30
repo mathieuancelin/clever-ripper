@@ -583,7 +583,7 @@ function requestToStartCleverApp(req, res) {
               delete promiseCache[serviceId];
               failure('App did not succeded to start');
             } else if (currentStatus === 'READY') {
-              console.log('Call released ...')
+              console.log('Call released ... ' + serviceId)
               delete promiseCache[serviceId];
               setTimeout(() => {
                 success('Your app has started, re-run the call ...');
