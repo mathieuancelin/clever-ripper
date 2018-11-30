@@ -193,6 +193,27 @@ function fetchOtoroshiEventsForService(id) {
   });
 }
 
+function fetchOtoroshiEventsForServiceFrom(id, from, size) {
+  const now = Date.now();
+  return fetch(`${OTOROSHI_URL}/api/services/${id}/events?from=${from}&to=${now}&pageSize=${size}`, { // Otoroshi v1.2.0+ compatible
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Host: OTOROSHI_HOST,
+      Authorization: `Basic ${base64.encode(OTOROSHI_CLIENT_ID + ':' + OTOROSHI_CLIENT_SECRET)}`
+    }
+  }).then(r => {
+    if (r.status == 200) {
+      return r.json();
+    } else {
+      return Promise.reject('[fetchOtoroshiEventsForService] Bad status: ' + r.status);
+    }
+  }).then(arr => {
+    const finalArr = arr.filter(a => JSON.stringify(a).toLowerCase().indexOf("statuscake") === -1);
+    return { hits: { count: finalArr.length, rawCount: arr.length } };
+  });
+}
+
 function fetchAppDeploymentStatus(id) {
   return cleverClient.getApp(id).then(app => {
     return app.state;
@@ -583,7 +604,7 @@ function requestToStartCleverApp(req, res) {
               delete promiseCache[serviceId];
               failure('App did not succeded to start');
             } else if (currentStatus === 'READY') {
-              console.log('Call released ... ' + serviceId)
+              console.log('Call released ... for ' + serviceId)
               delete promiseCache[serviceId];
               setTimeout(() => {
                 success('Your app has started, re-run the call ...');
@@ -694,7 +715,7 @@ function requestToStartCleverApp(req, res) {
                   window.location.reload();
                 });
               }
-              checkState();
+              setTimeout(checkState, 1000);
               setInterval(checkState, 4000);
             </script>
           </body>
@@ -918,8 +939,7 @@ if (process.env.ONE_SHOT === 'true') {
       setTimeout(() => displayCandidates(), 20000);
       setInterval(() => {
         displayCandidates();
-      }, TIME_WITHOUT_REQUEST * 12)
+      }, TIME_WITHOUT_REQUEST * 2)
     }
   });
 }
-
