@@ -553,10 +553,12 @@ function checkDeploymentStatus(serviceId, cleverAppId) {
 
 function requestToStartCleverApp(req, res) {
   const userAgent = (req.get('User-Agent') || 'none').toLowerCase();
-  if(userAgent.indexOf('statuscake') > -1) {
+  console.log('request with agent:', userAgent);
+  if (userAgent.indexOf('statuscake') > -1) {
     res.status(200).type('json').send({ message: 'I\'m slipping !!!' })
     return;
   }
+  console.log('not status cake');
   const header = req.get('CleverRipper');
   if (header && header === 'status') {
     const serviceId = req.params.serviceId;
